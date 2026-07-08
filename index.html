@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIRE Calculator — Malaysia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0d1b1e;
+    --panel:#132a2e;
+    --panel-2:#0f2226;
+    --panel-3:#0a1a1d;
+    --line:#24444a;
+    --paper:#eef3f2;
+    --muted:#9fb8bb;
+    --gold:#d9a441;
+    --teal:#4fc3b0;
+    --teal-dim:#2d6e64;
+    --danger:#e0654f;
+    --good:#6fbf73;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  header{padding:28px 32px 20px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+  header h1{font-size:22px; font-weight:600; letter-spacing:-0.01em;}
+  header .eyebrow{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--teal); margin-bottom:4px;}
+  header .tag{color:var(--muted); font-size:13px; max-width:420px;}
+  .wrap{max-width:1220px; margin:0 auto; padding:28px 32px 80px;}
+  .toolbar{display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;}
+  button{font-family:'Inter',sans-serif; font-size:13px; font-weight:600; border:1px solid var(--line); background:var(--panel); color:var(--paper); padding:10px 16px; border-radius:6px; cursor:pointer; transition:border-color .15s, background .15s;}
+  button:hover{border-color:var(--teal);}
+  button.primary{background:var(--teal-dim); border-color:var(--teal);}
+  button.primary:hover{background:var(--teal); color:var(--ink);}
+  button.ghost{background:transparent;}
+  button.small{padding:6px 10px; font-size:12px;}
+  button.danger-ghost{background:transparent; border-color:var(--danger); color:var(--danger);}
+  button.danger-ghost:hover{background:var(--danger); color:var(--ink);}
+  button:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+
+  .plan{background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:22px; overflow:hidden;}
+  .plan-head{display:flex; align-items:center; justify-content:space-between; padding:16px 20px; background:var(--panel-2); cursor:pointer; gap:12px; flex-wrap:wrap;}
+  .plan-head .titles{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .plan-head h2{font-size:17px;}
+  .badge{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 8px; border-radius:20px; border:1px solid var(--line); color:var(--muted);}
+  .badge.status-achieved{color:var(--good); border-color:var(--good);}
+  .badge.status-short{color:var(--danger); border-color:var(--danger);}
+  .plan-head .head-actions{display:flex; gap:8px;}
+  .plan-body{padding:20px; display:none;}
+  .plan-body.open{display:block;}
+
+  .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:860px){.grid,.grid.cols-3{grid-template-columns:repeat(2,1fr);}}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;}
+  .field .hint{font-size:10.5px; color:var(--muted); opacity:0.75; font-family:'Inter',sans-serif; line-height:1.4;}
+  .field input, .field select{background:var(--ink); border:1px solid var(--line); color:var(--paper); padding:9px 10px; border-radius:6px; font-size:13.5px; font-family:'IBM Plex Mono',monospace;}
+
+  .section-label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin:22px 0 10px; display:flex; align-items:center; gap:8px;}
+  .section-label:first-child{margin-top:0;}
+  .section-label::after{content:""; flex:1; height:1px; background:var(--line);}
+
+  .scenario-pair{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px;}
+  .dot.normal{background:var(--teal);}
+  .dot.cons{background:var(--gold);}
+  .scenario-tag{display:inline-flex; align-items:center; font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em;}
+
+  .timeline{display:flex; height:26px; border-radius:5px; overflow:hidden; margin:10px 0; border:1px solid var(--line);}
+  .timeline div{display:flex; align-items:center; justify-content:center; font-size:10px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; color:var(--ink); font-weight:600;}
+  .phase-accum{background:var(--teal);}
+  .phase-bridge{background:var(--danger); color:var(--paper) !important;}
+  .phase-decum{background:var(--gold);}
+
+  table{width:100%; border-collapse:collapse; margin-top:8px;}
+  th,td{text-align:right; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th:first-child, td:first-child{text-align:left;}
+  th{color:var(--muted); font-weight:500; font-size:10.5px; letter-spacing:0.03em; text-transform:uppercase;}
+  th.grp-normal{color:var(--teal); border-bottom:2px solid var(--teal);}
+  th.grp-cons{color:var(--gold); border-bottom:2px solid var(--gold);}
+  tr.milestone-key td{background:rgba(217,164,65,0.07);}
+  tr.milestone-fail td{color:var(--danger);}
+  .table-scroll{overflow-x:auto;}
+
+  .summary-cards{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:6px;}
+  @media(max-width:860px){.summary-cards{grid-template-columns:repeat(2,1fr);}}
+  .scard{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:14px;}
+  .scard .lbl{font-size:10.5px; color:var(--muted); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;}
+  .scard .val{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;}
+  .scard .sub{font-size:11px; color:var(--muted); margin-top:4px;}
+  .scard.verdict{grid-column:span 4; display:flex; align-items:center; justify-content:space-between; background:var(--panel-3); padding:16px 18px;}
+  @media(max-width:860px){.scard.verdict{grid-column:span 2;}}
+  .scard.verdict .headline{font-family:'Space Grotesk',sans-serif; font-size:16px;}
+  .scard.verdict .headline b{font-size:20px;}
+
+  .chart-wrap{position:relative; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:16px; margin-top:14px;}
+  .legend{display:flex; gap:16px; font-size:11.5px; color:var(--muted); margin-bottom:10px; flex-wrap:wrap; align-items:center;}
+  .legend span{display:flex; align-items:center; gap:6px;}
+  .legend .sw{width:14px; height:3px; display:inline-block; border-radius:2px;}
+  .legend .sw.dashed{background:none; border-top:2px dashed var(--muted); width:14px; height:0;}
+  .chart-hint{font-size:11px; color:var(--muted); margin-left:auto; opacity:0.75;}
+  .tooltip{
+    position:absolute; pointer-events:none; background:var(--panel-3); border:1px solid var(--line);
+    border-radius:8px; padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    line-height:1.7; white-space:nowrap; opacity:0; transition:opacity .1s; z-index:10; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  .tooltip .t-age{font-family:'Space Grotesk',sans-serif; font-size:14px; margin-bottom:6px; color:var(--paper);}
+  .tooltip .t-row{display:flex; justify-content:space-between; gap:18px;}
+  .tooltip .t-phase{color:var(--muted); text-transform:capitalize;}
+
+  .adv-toggle{display:flex; align-items:center; gap:8px; margin-top:20px; cursor:pointer; user-select:none;}
+  .adv-toggle .chev{transition:transform .15s;}
+  .adv-toggle.open .chev{transform:rotate(90deg);}
+  .adv-body{display:none; margin-top:14px; padding-top:6px;}
+  .adv-body.open{display:block;}
+
+  .asset-row, .phase-row{display:grid; grid-template-columns:1.4fr 0.8fr 1fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
+  .phase-row{grid-template-columns:1fr 1fr auto;}
+  @media(max-width:960px){.asset-row{grid-template-columns:1fr 1fr;} .phase-row{grid-template-columns:1fr 1fr;}}
+  .row-del{background:transparent; border:1px solid var(--line); color:var(--danger); border-radius:6px; padding:9px 10px; font-size:12px; height:38px;}
+  .row-del:hover{background:var(--danger); color:var(--ink);}
+  .add-row-btn{margin-top:2px;}
+
+  .note{font-size:12px; color:var(--muted); line-height:1.6; margin-top:14px; border-left:2px solid var(--line); padding-left:12px;}
+  .empty{text-align:center; padding:60px 20px; color:var(--muted);}
+  .empty h3{color:var(--paper); margin-bottom:8px; font-size:18px;}
+  footer{max-width:1220px; margin:0 auto; padding:0 32px 60px; color:var(--muted); font-size:12px; line-height:1.7;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">Malaysia · EPF + Multi-Asset Investments</div>
+    <h1>FIRE Calculator</h1>
+  </div>
+  <div class="tag">Lean · Regular · Fat · Coast · Barista — computed locally in your browser, nothing leaves this page</div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar">
+    <button class="primary" id="addPlanBtn">+ Add plan</button>
+    <button class="ghost" id="exportCsvBtn">Export CSV (for Notion import)</button>
+  </div>
+
+  <div id="plansContainer"></div>
+  <div id="emptyState" class="empty" style="display:none;">
+    <h3>No plans yet</h3>
+    <div>Add a plan to model Lean, Regular, Fat, Coast, or Barista FIRE.</div>
+  </div>
+</div>
+
+<footer>
+  <strong>Methodology.</strong> All figures are in today's MYR (real terms) — return assumptions are net-of-inflation, so the model never needs to inflate expenses forward, and the MYR/USD rate is applied once at today's rate rather than projected. Three phases per plan: <em>Accumulation</em> (current age → working-to age: EPF and Investments both receive contributions), <em>Bridge</em> (working-to age → 55: EPF is locked and earns dividends only, Investments alone fund net expenses — Coast FIRE plans stop contributions from the current age but otherwise follow this same structure), <em>Decumulation</em> (55 → 90: both pots unlocked, withdrawals split proportionally by balance). Barista income, reduced by your fluctuation % under the Conservative scenario, offsets expenses until the Barista end age. The FIRE target is <strong>not a single fixed number</strong> — it recalculates at every age from your expense and income timelines, so downsizing, other income starting/stopping, or lifestyle changes in later retirement all shift it automatically.
+</footer>
+
+<script>
+const FX_DEFAULT = 4.20;
+const FIRE_DEFAULTS = {
+  Lean:    { multN: 16, multC: 18 },
+  Regular: { multN: 25, multC: 28 },
+  Fat:     { multN: 30, multC: 33 },
+  Coast:   { multN: 25, multC: 28 },
+  Barista: { multN: 20, multC: 23 },
+};
+
+let plans = [];
+let planCounter = 0;
+let assetCounter = 0;
+
+function newPlan(fireType){
+  planCounter++;
+  const d = FIRE_DEFAULTS[fireType];
+  assetCounter++;
+  return {
+    id: 'p'+Date.now()+planCounter,
+    name: fireType + ' Plan ' + planCounter,
+    fireType: fireType,
+    currentAge: 30,
+    workingToAge: 55,
+    epfBalance: 80000,
+    epfEmployeePct: 11,
+    epfEmployerPct: 12,
+    monthlySalary: 8000,
+    investments: [
+      { id:'a'+assetCounter, name:'S&P 500 (VOO/CSPX)', currency:'USD', balance:20000, monthlyContribution:3000, returnOverride:null }
+    ],
+    fxRate: FX_DEFAULT,
+    expensePhases: [ { age:30, monthlyExpense:4500 } ],
+    incomePhases: [ { age:30, monthlyIncome:0 } ],
+    baristaIncome: 2000,
+    baristaFluctuation: 15,
+    baristaEndAge: 65,
+    rEquityNormal: 7, rEquityCons: 5,
+    rEpfNormal: 5.5, rEpfCons: 4,
+    multNormal: d.multN, multCons: d.multC,
+    open: true,
+    advOpen: false,
+  };
+}
+
+function fmt(n){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const sign = n < 0 ? '-' : '';
+  n = Math.abs(Math.round(n));
+  return sign + n.toLocaleString('en-MY');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function phaseValueAt(phases, age, key){
+  const sorted = [...phases].sort((a,b)=>a.age-b.age);
+  let val = sorted.length ? sorted[0][key] : 0;
+  for (const p of sorted){ if (p.age <= age) val = p[key]; else break; }
+  return val;
+}
+
+// ---- core projection engine ----
+function project(plan, scenario){
+  const rEquityGlobal = (scenario==='normal' ? plan.rEquityNormal : plan.rEquityCons)/100;
+  const rEpf = (scenario==='normal' ? plan.rEpfNormal : plan.rEpfCons)/100;
+  const isCoast = plan.fireType === 'Coast';
+  const isBarista = plan.fireType === 'Barista';
+  const baristaFluct = scenario==='normal' ? 0 : (plan.baristaFluctuation/100);
+  const baristaMonthlyEff = isBarista ? plan.baristaIncome * (1-baristaFluct) : 0;
+
+  const annualEpfContribution = plan.monthlySalary * ((plan.epfEmployeePct+plan.epfEmployerPct)/100) * 12;
+
+  // aggregate investments into one pot, using a balance-weighted blended return (static, computed at t0)
+  let invBalance0 = 0, weightedReturn = 0, annualContribution = 0;
+  plan.investments.forEach(a => {
+    const bal = a.currency === 'USD' ? a.balance * plan.fxRate : a.balance;
+    const r = (a.returnOverride !== null && a.returnOverride !== undefined && a.returnOverride !== '') ? a.returnOverride/100 : rEquityGlobal;
+    invBalance0 += bal;
+    weightedReturn += bal * r;
+    annualContribution += a.monthlyContribution * 12;
+  });
+  const rInvest = invBalance0 > 0 ? weightedReturn / invBalance0 : rEquityGlobal;
+
+  let epf = plan.epfBalance;
+  let nonEpf = invBalance0;
+
+  const rows = [];
+  for (let age = plan.currentAge; age <= 90; age++){
+    let phase;
+    if (age < plan.workingToAge && !isCoast) phase = 'accumulation';
+    else if (age < 55) phase = 'bridge';
+    else phase = 'decumulation';
+
+    const monthlyExpense = phaseValueAt(plan.expensePhases, age, 'monthlyExpense');
+    const monthlyIncome = phaseValueAt(plan.incomePhases, age, 'monthlyIncome');
+    const annualExpense = monthlyExpense * 12;
+    const annualOtherIncome = monthlyIncome * 12;
+    const multiple = scenario==='normal' ? plan.multNormal : plan.multCons;
+    const fireTarget = (annualExpense - annualOtherIncome) * multiple;
+
+    rows.push({ age, epf, nonEpf, combined: epf+nonEpf, phase, monthlyExpense, monthlyIncome, fireTarget });
+
+    if (phase === 'accumulation'){
+      epf = epf*(1+rEpf) + annualEpfContribution;
+      nonEpf = nonEpf*(1+rInvest) + annualContribution;
+    } else if (phase === 'bridge'){
+      epf = epf*(1+rEpf);
+      const baristaActive = isBarista && age < plan.baristaEndAge;
+      const netW = Math.max(annualExpense - annualOtherIncome - (baristaActive ? baristaMonthlyEff*12 : 0), 0);
+      nonEpf = nonEpf*(1+rInvest) - netW;
+    } else {
+      const baristaActive = isBarista && age < plan.baristaEndAge;
+      const netW = Math.max(annualExpense - annualOtherIncome - (baristaActive ? baristaMonthlyEff*12 : 0), 0);
+      const total = epf + nonEpf;
+      const epfShare = total > 0 ? epf/total : 0.5;
+      epf = epf*(1+rEpf) - netW*epfShare;
+      nonEpf = nonEpf*(1+rInvest) - netW*(1-epfShare);
+    }
+  }
+
+  let achievedAge = null;
+  for (const r of rows){ if (r.combined >= r.fireTarget){ achievedAge = r.age; break; } }
+  let depletionAge = null;
+  const startCheck = achievedAge || 55;
+  for (const r of rows){ if (r.age > startCheck && r.combined < 0){ depletionAge = r.age; break; } }
+
+  return { rows, achievedAge, depletionAge, rInvest };
+}
+
+// ---- rendering ----
+function render(){
+  const container = document.getElementById('plansContainer');
+  const empty = document.getElementById('emptyState');
+  container.innerHTML = '';
+  empty.style.display = plans.length ? 'none' : 'block';
+
+  plans.forEach(plan => {
+    const normal = project(plan, 'normal');
+    const cons = project(plan, 'conservative');
+    const achieved = normal.achievedAge && cons.achievedAge;
+
+    const el = document.createElement('div');
+    el.className = 'plan';
+    el.innerHTML = `
+      <div class="plan-head" data-toggle="${plan.id}">
+        <div class="titles">
+          <h2>${escapeHtml(plan.name)}</h2>
+          <span class="badge">${plan.fireType} FIRE</span>
+          <span class="badge ${achieved ? 'status-achieved' : 'status-short'}">${achieved ? 'On track' : 'Shortfall'}</span>
+        </div>
+        <div class="head-actions">
+          <button class="ghost small dup-btn" data-id="${plan.id}">Duplicate</button>
+          <button class="danger-ghost small del-btn" data-id="${plan.id}">Delete</button>
+        </div>
+      </div>
+      <div class="plan-body ${plan.open ? 'open' : ''}" id="body-${plan.id}"></div>
+    `;
+    container.appendChild(el);
+    renderPlanBody(document.getElementById('body-'+plan.id), plan, normal, cons);
+  });
+
+  container.querySelectorAll('.plan-head').forEach(h => {
+    h.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const id = h.dataset.toggle;
+      const p = plans.find(pp => pp.id === id);
+      p.open = !p.open;
+      document.getElementById('body-'+id).classList.toggle('open', p.open);
+    });
+  });
+  container.querySelectorAll('.dup-btn').forEach(b => b.addEventListener('click', () => duplicatePlan(b.dataset.id)));
+  container.querySelectorAll('.del-btn').forEach(b => b.addEventListener('click', () => deletePlan(b.dataset.id)));
+}
+
+function renderPlanBody(el, plan, normal, cons){
+  const achieved = normal.achievedAge && cons.achievedAge;
+  el.innerHTML = `
+    <div class="summary-cards">
+      <div class="scard verdict">
+        <div class="headline">${achieved
+          ? `On track — reaches its FIRE target by age <b>${Math.max(normal.achievedAge, cons.achievedAge)}</b> even under the Conservative case.`
+          : `Currently a shortfall — ${normal.achievedAge ? 'reaches target under Normal assumptions at age '+normal.achievedAge+', but' : 'does not reach target by 90 under Normal assumptions, and'} does not reach target under the Conservative case.`}</div>
+      </div>
+      <div class="scard">
+        <div class="lbl"><span class="dot normal"></span>FIRE target, Normal (today)</div>
+        <div class="val mono">${fmt(normal.rows[0].fireTarget)}</div>
+        <div class="sub">Conservative: ${fmt(cons.rows[0].fireTarget)} MYR</div>
+      </div>
+      <div class="scard">
+        <div class="lbl">Achieved age</div>
+        <div class="val mono"><span class="dot normal"></span>${normal.achievedAge ?? '90+'} &nbsp; <span class="dot cons"></span>${cons.achievedAge ?? '90+'}</div>
+        <div class="sub">Normal vs Conservative</div>
+      </div>
+      <div class="scard">
+        <div class="lbl">Combined pot at age 90</div>
+        <div class="val mono">${fmt(normal.rows[normal.rows.length-1].combined)}</div>
+        <div class="sub">Conservative: ${fmt(cons.rows[cons.rows.length-1].combined)}</div>
+      </div>
+      <div class="scard">
+        <div class="lbl">Depletion risk</div>
+        <div class="val mono" style="${cons.depletionAge ? 'color:var(--danger)' : ''}">${cons.depletionAge ? 'Age '+cons.depletionAge : 'None to 90'}</div>
+        <div class="sub">Normal: ${normal.depletionAge ? 'Age '+normal.depletionAge : 'None to 90'}</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="legend">
+        <span><span class="sw" style="background:var(--teal)"></span>Combined pot — Normal</span>
+        <span><span class="sw" style="background:var(--gold)"></span>Combined pot — Conservative</span>
+        <span><span class="sw dashed"></span>FIRE target (Normal, dashed)</span>
+        <span class="chart-hint">Hover the chart for exact values at any age</span>
+      </div>
+      <div style="position:relative;">
+        ${renderChart(plan, normal, cons)}
+        <div class="tooltip" id="tooltip-${plan.id}"></div>
+      </div>
+    </div>
+
+    <div class="section-label">Phase timeline</div>
+    ${renderTimeline(plan)}
+
+    <div class="section-label">Milestones</div>
+    <div class="table-scroll">
+      ${renderMilestoneTable(plan, normal, cons)}
+    </div>
+
+    <div class="adv-toggle ${plan.advOpen ? 'open' : ''}" id="advtoggle-${plan.id}">
+      <span class="chev">▸</span>
+      <span class="section-label" style="margin:0; color:var(--paper); font-weight:600;">Edit plan inputs</span>
+    </div>
+    <div class="adv-body ${plan.advOpen ? 'open' : ''}" id="advbody-${plan.id}">
+      ${renderAdvancedInputs(plan)}
+    </div>
+  `;
+
+  // chart tooltip interactivity
+  setupChartTooltip(el, plan, normal, cons);
+
+  // advanced toggle
+  document.getElementById('advtoggle-'+plan.id).addEventListener('click', () => {
+    plan.advOpen = !plan.advOpen;
+    document.getElementById('advtoggle-'+plan.id).classList.toggle('open', plan.advOpen);
+    document.getElementById('advbody-'+plan.id).classList.toggle('open', plan.advOpen);
+  });
+
+  // basic + assumption inputs
+  el.querySelectorAll('input[data-field], select[data-field]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const f = inp.dataset.field;
+      const val = inp.type === 'number' ? (parseFloat(inp.value) || 0) : inp.value;
+      plan[f] = val;
+      if (f === 'fireType'){
+        const d = FIRE_DEFAULTS[val];
+        plan.multNormal = d.multN;
+        plan.multCons = d.multC;
+      }
+      render();
+    });
+  });
+
+  // investment asset rows
+  el.querySelectorAll('[data-asset-field]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const asset = plan.investments.find(a => a.id === inp.dataset.assetId);
+      const f = inp.dataset.assetField;
+      if (f === 'returnOverride'){
+        asset[f] = inp.value === '' ? null : parseFloat(inp.value);
+      } else if (f === 'name' || f === 'currency'){
+        asset[f] = inp.value;
+      } else {
+        asset[f] = parseFloat(inp.value) || 0;
+      }
+      render();
+    });
+  });
+  el.querySelectorAll('.del-asset-btn').forEach(b => b.addEventListener('click', () => {
+    plan.investments = plan.investments.filter(a => a.id !== b.dataset.assetId);
+    render();
+  }));
+  const addAssetBtn = el.querySelector('.add-asset-btn');
+  if (addAssetBtn) addAssetBtn.addEventListener('click', () => {
+    assetCounter++;
+    plan.investments.push({ id:'a'+assetCounter, name:'New investment', currency:'MYR', balance:0, monthlyContribution:0, returnOverride:null });
+    render();
+  });
+
+  // expense phase rows
+  el.querySelectorAll('[data-exp-field]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const idx = parseInt(inp.dataset.expIdx);
+      plan.expensePhases[idx][inp.dataset.expField] = parseFloat(inp.value) || 0;
+      render();
+    });
+  });
+  el.querySelectorAll('.del-exp-btn').forEach(b => b.addEventListener('click', () => {
+    const idx = parseInt(b.dataset.expIdx);
+    if (plan.expensePhases.length > 1) plan.expensePhases.splice(idx,1);
+    render();
+  }));
+  const addExpBtn = el.querySelector('.add-exp-btn');
+  if (addExpBtn) addExpBtn.addEventListener('click', () => {
+    const lastAge = plan.expensePhases[plan.expensePhases.length-1].age;
+    plan.expensePhases.push({ age: lastAge+10, monthlyExpense: plan.expensePhases[plan.expensePhases.length-1].monthlyExpense });
+    render();
+  });
+
+  // income phase rows
+  el.querySelectorAll('[data-inc-field]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const idx = parseInt(inp.dataset.incIdx);
+      plan.incomePhases[idx][inp.dataset.incField] = parseFloat(inp.value) || 0;
+      render();
+    });
+  });
+  el.querySelectorAll('.del-inc-btn').forEach(b => b.addEventListener('click', () => {
+    const idx = parseInt(b.dataset.incIdx);
+    if (plan.incomePhases.length > 1) plan.incomePhases.splice(idx,1);
+    render();
+  }));
+  const addIncBtn = el.querySelector('.add-inc-btn');
+  if (addIncBtn) addIncBtn.addEventListener('click', () => {
+    const lastAge = plan.incomePhases[plan.incomePhases.length-1].age;
+    plan.incomePhases.push({ age: lastAge+10, monthlyIncome: plan.incomePhases[plan.incomePhases.length-1].monthlyIncome });
+    render();
+  });
+}
+
+function renderAdvancedInputs(plan){
+  return `
+    <div class="section-label">Plan basics</div>
+    <div class="grid">
+      ${field('Plan name','text','name',plan.name)}
+      ${selectField('FIRE type','fireType',plan.fireType,['Lean','Regular','Fat','Coast','Barista'])}
+      ${field('Current age','number','currentAge',plan.currentAge)}
+      ${field('Working-to age','number','workingToAge',plan.workingToAge)}
+    </div>
+
+    <div class="section-label">EPF</div>
+    <div class="grid">
+      ${field('EPF balance today (MYR)','number','epfBalance',plan.epfBalance)}
+      ${field('Employee contribution %','number','epfEmployeePct',plan.epfEmployeePct)}
+      ${field('Employer contribution %','number','epfEmployerPct',plan.epfEmployerPct)}
+      ${field('Monthly salary (MYR)','number','monthlySalary',plan.monthlySalary)}
+    </div>
+
+    <div class="section-label">Investments — add any number of assets (stocks, ETFs, unit trusts...)</div>
+    ${plan.investments.map(a => `
+      <div class="asset-row">
+        <div class="field"><label>Name</label><input data-asset-id="${a.id}" data-asset-field="name" type="text" value="${escapeHtml(a.name)}"></div>
+        <div class="field"><label>Currency</label>
+          <select data-asset-id="${a.id}" data-asset-field="currency">
+            <option value="MYR" ${a.currency==='MYR'?'selected':''}>MYR</option>
+            <option value="USD" ${a.currency==='USD'?'selected':''}>USD</option>
+          </select>
+        </div>
+        <div class="field"><label>Balance today</label><input data-asset-id="${a.id}" data-asset-field="balance" type="number" value="${a.balance}"></div>
+        <div class="field"><label>Monthly contribution (MYR)</label><input data-asset-id="${a.id}" data-asset-field="monthlyContribution" type="number" value="${a.monthlyContribution}"></div>
+        <div class="field"><label>Return % override (blank = use default below)</label><input data-asset-id="${a.id}" data-asset-field="returnOverride" type="number" value="${a.returnOverride ?? ''}" placeholder="auto"></div>
+        <button class="row-del del-asset-btn" data-asset-id="${a.id}">Remove</button>
+      </div>
+    `).join('')}
+    <button class="ghost small add-asset-btn add-row-btn">+ Add investment</button>
+    <div class="field" style="max-width:260px; margin-top:14px;">${field('MYR/USD rate','number','fxRate',plan.fxRate,'0.01')}</div>
+    <div class="hint" style="margin-top:6px;">Applied once, today — balances aren't re-converted as the FX rate moves. A return % override applies identically to both the Normal and Conservative scenarios for that asset.</div>
+
+    <div class="section-label">Living cost over time — add a row for any age your spending changes (e.g. downsizing, healthcare)</div>
+    ${plan.expensePhases.map((p,idx) => `
+      <div class="phase-row">
+        <div class="field"><label>From age</label><input data-exp-idx="${idx}" data-exp-field="age" type="number" value="${p.age}"></div>
+        <div class="field"><label>Monthly expense (MYR)</label><input data-exp-idx="${idx}" data-exp-field="monthlyExpense" type="number" value="${p.monthlyExpense}"></div>
+        ${plan.expensePhases.length>1 ? `<button class="row-del del-exp-btn" data-exp-idx="${idx}">Remove</button>` : '<span></span>'}
+      </div>
+    `).join('')}
+    <button class="ghost small add-exp-btn add-row-btn">+ Add expense change</button>
+
+    <div class="section-label">Other income over time — rental, pension, part-time work, etc.</div>
+    ${plan.incomePhases.map((p,idx) => `
+      <div class="phase-row">
+        <div class="field"><label>From age</label><input data-inc-idx="${idx}" data-inc-field="age" type="number" value="${p.age}"></div>
+        <div class="field"><label>Monthly income (MYR)</label><input data-inc-idx="${idx}" data-inc-field="monthlyIncome" type="number" value="${p.monthlyIncome}"></div>
+        ${plan.incomePhases.length>1 ? `<button class="row-del del-inc-btn" data-inc-idx="${idx}">Remove</button>` : '<span></span>'}
+      </div>
+    `).join('')}
+    <button class="ghost small add-inc-btn add-row-btn">+ Add income change</button>
+
+    ${plan.fireType==='Barista' ? `
+    <div class="section-label">Barista income (part-time, post-retirement)</div>
+    <div class="grid cols-3">
+      ${field('Barista income /month (MYR)','number','baristaIncome',plan.baristaIncome)}
+      ${field('Ends at age','number','baristaEndAge',plan.baristaEndAge)}
+      ${field('Fluctuation % — cut applied only in Conservative case','number','baristaFluctuation',plan.baristaFluctuation)}
+    </div>` : ''}
+
+    <div class="section-label">Growth &amp; withdrawal assumptions</div>
+    <div class="scenario-pair">
+      <div class="field"><label><span class="dot normal"></span>Investment return % (real), Normal</label><input data-field="rEquityNormal" type="number" value="${plan.rEquityNormal}"></div>
+      <div class="field"><label><span class="dot cons"></span>Investment return % (real), Conservative</label><input data-field="rEquityCons" type="number" value="${plan.rEquityCons}"></div>
+      <div class="field"><label><span class="dot normal"></span>EPF dividend % (real), Normal</label><input data-field="rEpfNormal" type="number" value="${plan.rEpfNormal}"></div>
+      <div class="field"><label><span class="dot cons"></span>EPF dividend % (real), Conservative</label><input data-field="rEpfCons" type="number" value="${plan.rEpfCons}"></div>
+      <div class="field">
+        <label><span class="dot normal"></span>Withdrawal multiple (×), Normal</label>
+        <input data-field="multNormal" type="number" value="${plan.multNormal}">
+        <div class="hint">Inverse of your safe withdrawal rate. 25× ≈ withdraw 1/25 = 4%/yr of the pot. Lower × = you plan to withdraw a higher % per year (more optimistic); higher × = you hold back more (more conservative).</div>
+      </div>
+      <div class="field">
+        <label><span class="dot cons"></span>Withdrawal multiple (×), Conservative</label>
+        <input data-field="multCons" type="number" value="${plan.multCons}">
+        <div class="hint">Same idea, stricter — e.g. 28× ≈ 3.6%/yr.</div>
+      </div>
+    </div>
+  `;
+}
+
+function field(label, type, key, value, step){
+  return `<div class="field"><label>${label}</label><input data-field="${key}" type="${type}" value="${value}" ${step?`step="${step}"`:''}></div>`;
+}
+function selectField(label, key, value, options){
+  return `<div class="field"><label>${label}</label><select data-field="${key}">${options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`).join('')}</select></div>`;
+}
+
+function renderTimeline(plan){
+  const start = plan.currentAge, end = 90;
+  const total = end - start;
+  const isCoast = plan.fireType === 'Coast';
+  const accumEnd = isCoast ? start : Math.min(plan.workingToAge, 55);
+  const bridgeEnd = 55;
+  const accumPct = Math.max(0, (accumEnd - start) / total * 100);
+  const bridgePct = Math.max(0, (Math.min(bridgeEnd,end) - Math.max(accumEnd,start)) / total * 100);
+  const decumPct = Math.max(0, 100 - accumPct - bridgePct);
+  return `<div class="timeline">
+    ${accumPct > 0 ? `<div class="phase-accum" style="width:${accumPct}%">Accumulation</div>` : ''}
+    ${bridgePct > 0 ? `<div class="phase-bridge" style="width:${bridgePct}%">Bridge (EPF locked)</div>` : ''}
+    ${decumPct > 0 ? `<div class="phase-decum" style="width:${decumPct}%">Decumulation</div>` : ''}
+  </div>
+  <div class="note">Age ${start} → ${accumEnd > start ? accumEnd : start}${accumEnd>start?' accumulation':''}${bridgePct>0?`, then ${accumEnd} → 55 bridge`:''}, then 55 → 90 decumulation.</div>`;
+}
+
+function renderChart(plan, normal, cons){
+  const w = 1080, h = 280, padL = 60, padR = 20, padT = 16, padB = 30;
+  const allVals = [...normal.rows.map(r=>r.combined), ...cons.rows.map(r=>r.combined), ...normal.rows.map(r=>r.fireTarget), 0];
+  const maxV = Math.max(...allVals) * 1.08;
+  const minV = Math.min(0, Math.min(...allVals));
+  const ages = normal.rows.map(r=>r.age);
+  const xScale = age => padL + (age-ages[0])/(ages[ages.length-1]-ages[0]) * (w-padL-padR);
+  const yScale = v => padT + (1 - (v-minV)/(maxV-minV)) * (h-padT-padB);
+
+  const pathFor = (rows,key) => rows.map((r,i) => `${i===0?'M':'L'}${xScale(r.age).toFixed(1)},${yScale(r[key]).toFixed(1)}`).join(' ');
+  const zeroY = yScale(0);
+
+  let ticks = '';
+  for (let a = ages[0]; a <= ages[ages.length-1]; a += 10){
+    const x = xScale(a);
+    ticks += `<line x1="${x}" y1="${padT}" x2="${x}" y2="${h-padB}" stroke="#24444a" stroke-width="1"/>`;
+    ticks += `<text x="${x}" y="${h-10}" fill="#9fb8bb" font-size="10" font-family="IBM Plex Mono" text-anchor="middle">${a}</text>`;
+  }
+
+  return `<svg id="chart-svg-${plan.id}" viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block; cursor:crosshair;"
+    data-padl="${padL}" data-padr="${padR}" data-w="${w}" data-age0="${ages[0]}" data-age1="${ages[ages.length-1]}">
+    ${ticks}
+    <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="#24444a" stroke-width="1" stroke-dasharray="2,3"/>
+    <path d="${pathFor(normal.rows,'fireTarget')}" fill="none" stroke="#9fb8bb" stroke-width="1.3" stroke-dasharray="5,4" opacity="0.7"/>
+    <path d="${pathFor(cons.rows,'combined')}" fill="none" stroke="#d9a441" stroke-width="2"/>
+    <path d="${pathFor(normal.rows,'combined')}" fill="none" stroke="#4fc3b0" stroke-width="2.4"/>
+    <line id="crosshair-${plan.id}" x1="0" y1="${padT}" x2="0" y2="${h-padB}" stroke="#eef3f2" stroke-width="1" opacity="0" stroke-dasharray="3,3"/>
+  </svg>`;
+}
+
+function setupChartTooltip(el, plan, normal, cons){
+  const svg = document.getElementById('chart-svg-'+plan.id);
+  const tooltip = document.getElementById('tooltip-'+plan.id);
+  const crosshair = document.getElementById('crosshair-'+plan.id);
+  if (!svg || !tooltip) return;
+  const padL = parseFloat(svg.dataset.padl), padR = parseFloat(svg.dataset.padr), vbW = parseFloat(svg.dataset.w);
+  const age0 = parseFloat(svg.dataset.age0), age1 = parseFloat(svg.dataset.age1);
+
+  function handleMove(evt){
+    const rect = svg.getBoundingClientRect();
+    const scaleX = vbW / rect.width;
+    const xPx = (evt.clientX - rect.left) * scaleX;
+    let frac = (xPx - padL) / (vbW - padL - padR);
+    frac = Math.max(0, Math.min(1, frac));
+    const age = Math.round(age0 + frac * (age1 - age0));
+    const idx = age - age0;
+    const rn = normal.rows[idx], rc = cons.rows[idx];
+    if (!rn || !rc) return;
+
+    const xAtAge = padL + (age-age0)/(age1-age0) * (vbW-padL-padR);
+    crosshair.setAttribute('x1', xAtAge); crosshair.setAttribute('x2', xAtAge); crosshair.setAttribute('opacity','0.5');
+
+    tooltip.innerHTML = `
+      <div class="t-age">Age ${age} <span class="t-phase">— ${rn.phase}</span></div>
+      <div class="t-row"><span>Monthly expense</span><span>${fmt(rn.monthlyExpense)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>EPF</span><span>${fmt(rn.epf)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>Investments</span><span>${fmt(rn.nonEpf)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>Combined</span><span>${fmt(rn.combined)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>EPF</span><span>${fmt(rc.epf)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>Investments</span><span>${fmt(rc.nonEpf)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>Combined</span><span>${fmt(rc.combined)}</span></div>
+      <div class="t-row"><span>FIRE target</span><span>${fmt(rn.fireTarget)}</span></div>
+    `;
+    tooltip.style.opacity = '1';
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    let left = (evt.clientX - wrapRect.left) + 16;
+    if (left + 220 > wrapRect.width) left = (evt.clientX - wrapRect.left) - 236;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = '4px';
+  }
+  function handleLeave(){
+    tooltip.style.opacity = '0';
+    crosshair.setAttribute('opacity','0');
+  }
+  svg.addEventListener('mousemove', handleMove);
+  svg.addEventListener('mouseleave', handleLeave);
+  svg.addEventListener('touchmove', (e) => { if (e.touches[0]) handleMove(e.touches[0]); }, {passive:true});
+}
+
+function renderMilestoneTable(plan, normal, cons){
+  const milestoneAges = new Set();
+  for (let a = Math.ceil(plan.currentAge/5)*5; a <= 90; a += 5) milestoneAges.add(a);
+  milestoneAges.add(plan.currentAge);
+  milestoneAges.add(Math.min(plan.workingToAge,90));
+  milestoneAges.add(55);
+  if (normal.achievedAge) milestoneAges.add(normal.achievedAge);
+  if (cons.achievedAge) milestoneAges.add(cons.achievedAge);
+  milestoneAges.add(90);
+  const sorted = [...milestoneAges].filter(a => a>=plan.currentAge && a<=90).sort((a,b)=>a-b);
+
+  const rowsN = Object.fromEntries(normal.rows.map(r=>[r.age,r]));
+  const rowsC = Object.fromEntries(cons.rows.map(r=>[r.age,r]));
+
+  const trs = sorted.map(age => {
+    const rn = rowsN[age], rc = rowsC[age];
+    const isKey = age===55 || age===plan.workingToAge || age===normal.achievedAge || age===cons.achievedAge;
+    const fail = rc.combined < 0 || rn.combined < 0;
+    return `<tr class="${isKey?'milestone-key':''} ${fail?'milestone-fail':''}">
+      <td>${age}${age===normal.achievedAge?' ★ Normal target hit':''}${age===cons.achievedAge?' ★ Conservative target hit':''}</td>
+      <td style="text-transform:capitalize;">${rn.phase}</td>
+      <td>${fmt(rn.monthlyExpense)}</td>
+      <td>${fmt(rn.epf)}</td>
+      <td>${fmt(rn.nonEpf)}</td>
+      <td>${fmt(rn.combined)}</td>
+      <td>${fmt(rc.epf)}</td>
+      <td>${fmt(rc.nonEpf)}</td>
+      <td>${fmt(rc.combined)}</td>
+    </tr>`;
+  }).join('');
+
+  return `<table>
+    <thead>
+      <tr>
+        <th rowspan="2">Age</th><th rowspan="2">Phase</th><th rowspan="2">Monthly<br>expense</th>
+        <th class="grp-normal" colspan="3">Normal</th>
+        <th class="grp-cons" colspan="3">Conservative</th>
+      </tr>
+      <tr>
+        <th>EPF</th><th>Investments</th><th>Combined</th>
+        <th>EPF</th><th>Investments</th><th>Combined</th>
+      </tr>
+    </thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+}
+
+// ---- plan management ----
+function duplicatePlan(id){
+  const p = plans.find(pp => pp.id === id);
+  const copy = JSON.parse(JSON.stringify(p));
+  copy.id = 'p'+Date.now()+(planCounter++);
+  copy.name = p.name + ' (copy)';
+  copy.investments = copy.investments.map(a => { assetCounter++; return {...a, id:'a'+assetCounter}; });
+  copy.open = true;
+  plans.push(copy);
+  render();
+}
+function deletePlan(id){
+  plans = plans.filter(p => p.id !== id);
+  render();
+}
+document.getElementById('addPlanBtn').addEventListener('click', () => { plans.push(newPlan('Regular')); render(); });
+
+// ---- CSV export: long format, one row per (plan, pot type, age) ----
+function exportCsv(){
+  const header = ['Plan','FIRE_Type','Pot_Type','Age','Phase','Monthly_Expense','Balance_Normal','Balance_Conservative','FIRE_Target_Normal','FIRE_Target_Conservative'];
+  const lines = [header.join(',')];
+
+  plans.forEach(plan => {
+    const normal = project(plan, 'normal');
+    const cons = project(plan, 'conservative');
+    const potTypes = ['EPF','Investments','Combined'];
+    for (let i = 0; i < normal.rows.length; i++){
+      const rn = normal.rows[i], rc = cons.rows[i];
+      potTypes.forEach(pt => {
+        const bn = pt==='EPF' ? rn.epf : pt==='Investments' ? rn.nonEpf : rn.combined;
+        const bc = pt==='EPF' ? rc.epf : pt==='Investments' ? rc.nonEpf : rc.combined;
+        lines.push([
+          csvSafe(plan.name), plan.fireType, pt, rn.age, rn.phase, Math.round(rn.monthlyExpense),
+          Math.round(bn), Math.round(bc), Math.round(rn.fireTarget), Math.round(rc.fireTarget)
+        ].join(','));
+      });
+    }
+  });
+
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'fire-projection.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+function csvSafe(s){ s = String(s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+// seed with one example plan
+plans.push(newPlan('Regular'));
+render();
+</script>
+</body>
+</html>

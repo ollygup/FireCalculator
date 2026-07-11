@@ -1,0 +1,1731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIRE Calculator — Malaysia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0b; --panel:#131316; --panel-2:#18181c; --panel-3:#0e0e10;
+    --line:#26262b; --paper:#f7f7f5; --muted:#8a8a90;
+    --gold:#f5a623; --teal:#14b8a6; --teal-dim:#0d9488; --danger:#ef4444; --good:#22c55e;
+    /* type scale: 11/12/13/14/16/19/24 — Space Grotesk = headings/verdict, IBM Plex Mono = tabular/data, Inter = body/labels */
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--ink); color:var(--paper); font-family:'Inter',sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; overflow-x:hidden;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:var(--teal);}
+
+  /* top bar */
+  .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--panel-2); border-bottom:1px solid var(--line);}
+  .hamburger{background:transparent; border:1px solid var(--line); border-radius:8px; width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:border-color .15s, background .15s;}
+  .hamburger:hover{border-color:var(--muted); background:var(--panel-2);}
+  .hamburger span{display:block; width:16px; height:2px; background:var(--paper); position:relative;}
+  .hamburger span::before,.hamburger span::after{content:""; position:absolute; width:16px; height:2px; background:var(--paper); left:0;}
+  .hamburger span::before{top:-5px;} .hamburger span::after{top:5px;}
+  .topbar h1{font-size:16px; font-weight:600; white-space:nowrap;}
+  .topbar .view-label{margin-left:8px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:30vw; padding:4px 10px; border:1px solid var(--line); border-radius:20px; display:none;}
+  .topbar .view-label.show{display:inline-block;}
+
+  /* drawer */
+  .backdrop{position:fixed; inset:0; background:rgba(10,10,11,0.7); backdrop-filter:blur(2px); z-index:29; opacity:0; pointer-events:none; transition:opacity .2s;}
+  .backdrop.open{opacity:1; pointer-events:auto;}
+
+  /* in-app modal (replaces native confirm/alert, which sandboxed previews block) */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(10,10,11,0.75); backdrop-filter:blur(2px); z-index:49; opacity:0; pointer-events:none; transition:opacity .15s;}
+  .modal-backdrop.open{opacity:1; pointer-events:auto;}
+  .modal-box{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.96); width:min(380px, calc(100vw - 40px)); background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:22px; z-index:50; opacity:0; pointer-events:none; transition:opacity .15s, transform .15s; box-shadow:0 20px 50px rgba(0,0,0,0.5);}
+  .modal-box.open{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .modal-msg{font-size:14px; line-height:1.6; margin-bottom:18px; color:var(--paper);}
+  .modal-actions{display:flex; justify-content:flex-end; gap:8px;}
+  .drawer{position:fixed; top:0; left:0; bottom:0; width:280px; max-width:84vw; background:var(--panel); border-right:1px solid var(--line); z-index:30; transform:translateX(-100%); transition:transform .22s cubic-bezier(.2,.8,.2,1); display:flex; flex-direction:column; padding:calc(14px + env(safe-area-inset-top)) 0 calc(14px + env(safe-area-inset-bottom));}
+  .drawer.open{transform:translateX(0);}
+  .drawer .dhead{display:flex; align-items:center; justify-content:space-between; padding:4px 12px 16px 20px; border-bottom:1px solid var(--line); margin-bottom:10px;}
+  .drawer .dhead h2{font-size:16px; letter-spacing:0.01em;}
+  .drawer-close{background:transparent; border:1px solid var(--line); border-radius:8px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; padding:0; flex-shrink:0;}
+  .drawer-close:hover{color:var(--paper); border-color:var(--muted);}
+  .drawer-scroll{flex:1; overflow-y:auto; padding:4px 10px;}
+  .navitem{display:flex; align-items:center; gap:12px; padding:12px 12px; cursor:pointer; color:var(--muted); font-size:14px; font-weight:500; border-radius:10px; margin-bottom:2px; min-height:48px; transition:background .12s, color .12s;}
+  .navitem:hover{background:var(--panel-2); color:var(--paper);}
+  .navitem.active{color:var(--paper); background:linear-gradient(90deg, rgba(20,184,166,0.16), rgba(20,184,166,0.03)); box-shadow:inset 3px 0 0 var(--teal);}
+  .navitem .n-icon{width:18px; height:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:inherit; opacity:0.85;}
+  .navitem .n-text{min-width:0;}
+  .navitem .n-label{overflow-wrap:break-word;}
+  .navitem .n-sub{font-size:11px; color:var(--muted); font-weight:400; margin-top:2px; overflow-wrap:break-word;}
+  @media(min-width:900px){ .drawer{width:250px;} }
+
+  .wrap{max-width:1220px; margin:0 auto; padding:24px 20px 80px;}
+  :root{ --btn-h:40px; --btn-h-sm:32px; }
+  button{font-family:'Inter',sans-serif; font-size:13px; font-weight:600; border:1px solid var(--line); background:var(--panel); color:var(--paper); padding:0 16px; height:var(--btn-h); border-radius:8px; cursor:pointer; transition:border-color .15s, background .15s; display:inline-flex; align-items:center; justify-content:center; line-height:1;}
+  button:hover{border-color:var(--muted);}
+  button.primary{background:var(--teal); border-color:var(--teal); color:#fff;}
+  button.primary:hover{background:var(--teal-dim); border-color:var(--teal-dim);}
+  button.ghost{background:transparent;}
+  button.small{height:var(--btn-h-sm); padding:0 12px; font-size:12px;}
+  button.danger-ghost{background:transparent; border-color:var(--danger); color:var(--danger);}
+  button.danger-ghost:hover{background:var(--danger); color:var(--ink);}
+  button:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+  button:disabled{opacity:0.4; cursor:not-allowed;}
+
+  /* kebab menu (mobile action collapse) */
+  .head-actions{position:relative; flex-shrink:0;}
+  .action-set-desktop{display:flex; gap:8px; align-items:center;}
+  .kebab-btn{display:none; width:var(--btn-h-sm); height:var(--btn-h-sm); padding:0; font-size:16px; flex-shrink:0;}
+  @media(max-width:768px){
+    .action-set-desktop{display:none;}
+    .kebab-btn{display:inline-flex;}
+    .plan-head{position:relative; flex-wrap:nowrap; padding-right:60px;}
+    .plan-head .titles{min-width:0; flex:1 1 auto;}
+    .plan-head .head-actions{position:absolute; top:16px; right:16px; margin:0;}
+  }
+  .kebab-menu{position:absolute; top:calc(100% + 6px); right:0; left:auto; max-width:calc(100vw - 40px); background:var(--panel-2); border:1px solid var(--line); border-radius:10px; min-width:190px; box-shadow:0 8px 24px rgba(0,0,0,0.45); z-index:15; padding:6px; display:none; flex-direction:column; gap:2px;}
+  .kebab-menu.open{display:flex;}
+  .kebab-menu button{background:transparent !important; border:none !important; color:var(--paper); justify-content:flex-start !important; width:100%; height:var(--btn-h); padding:0 10px; border-radius:8px; font-weight:500;}
+  .kebab-menu button:hover{background:var(--panel-3) !important;}
+  .kebab-menu button.danger-ghost{color:var(--danger);}
+  .kebab-menu button.danger-ghost:hover{background:var(--danger) !important; color:var(--ink);}
+  .kebab-menu .kebab-check{display:flex; align-items:center; gap:8px; padding:0 10px; height:var(--btn-h); font-size:13px; cursor:pointer;}
+
+  /* mobile timeline stack */
+  .timeline-stack{display:none; flex-direction:column; gap:8px; margin:10px 0;}
+  .timeline-stack .ts-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel-3);}
+  .timeline-stack .ts-dot{width:12px; height:12px; border-radius:3px; flex-shrink:0;}
+  .timeline-stack .ts-label{font-weight:600; font-size:13px;}
+  .timeline-stack .ts-range{margin-left:auto; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted);}
+  @media(max-width:768px){
+    .timeline{display:none;}
+    .timeline-stack{display:flex;}
+  }
+
+  /* wizard */
+  .wiz-progress{display:flex; flex-wrap:wrap; margin:10px 0 18px;}
+  .wiz-dot{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:12px; cursor:pointer; padding:0; display:inline-flex; align-items:center; justify-content:center; margin:0 10px 8px 0;}
+  .wiz-dot.done{border-color:var(--teal); color:var(--teal);}
+  .wiz-dot.active{background:var(--teal); border-color:var(--teal); color:#fff; font-weight:600;}
+  .wiz-step-title{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; margin-bottom:14px;}
+  .wiz-body{background:var(--panel-2); border-radius:14px; padding:20px; margin-bottom:18px;}
+  .wiz-q{margin-bottom:16px;}
+  .wiz-q:last-child{margin-bottom:0;}
+  .wiz-nav{display:flex; justify-content:space-between; align-items:center; gap:10px;}
+  .wiz-review-row{display:flex; justify-content:space-between; gap:16px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .wiz-review-row:last-child{border-bottom:none;}
+  .wiz-review-q{color:var(--muted); max-width:60%;}
+  .wiz-review-a{text-align:right; font-weight:600;}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; align-items:center;}
+  .back-link{display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; cursor:pointer; margin-bottom:8px;}
+  .back-link:hover{color:var(--teal);}
+  .breadcrumb{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:10px;}
+  .autosave-tag{font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px; margin-bottom:18px;}
+  .autosave-tag .dot-save{width:6px; height:6px; border-radius:50%; background:var(--good); flex-shrink:0;}
+
+  .plan{background:var(--panel-2); border-radius:14px; margin-bottom:22px; overflow:hidden; box-shadow:0 1px 0 rgba(255,255,255,0.04) inset;}
+  .plan-head{display:flex; align-items:center; justify-content:space-between; padding:18px 22px; background:var(--panel); gap:12px; flex-wrap:wrap;}
+  .plan-head .titles{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .plan-head h2{font-size:16px;}
+  .badge{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 8px; border-radius:20px; border:1px solid var(--line); color:var(--muted); overflow-wrap:break-word; word-break:break-word; max-width:100%;}
+  .badge.status-achieved{color:var(--good); border-color:var(--good);}
+  .badge.status-short{color:var(--danger); border-color:var(--danger);}
+  .plan-head .head-actions{display:flex; gap:8px; align-items:center;}
+  .plan-body{padding:20px;}
+
+  .grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; min-width:0;}
+  .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  @media(max-width:900px){.grid,.grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:600px){.grid,.grid.cols-3,.grid.cols-2{grid-template-columns:minmax(0,1fr);}}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;}
+  .field .hint{font-size:11px; color:var(--muted); opacity:0.75; font-family:'Inter',sans-serif; line-height:1.4;}
+  .field .err{font-size:11px; color:var(--danger); font-family:'Inter',sans-serif;}
+  .field.has-error input, .field.has-error select{border-color:var(--danger);}
+  .field input, .field select{background:var(--ink); border:1px solid var(--line); color:var(--paper); padding:9px 10px; border-radius:8px; font-size:13px; font-family:'IBM Plex Mono',monospace; width:100%; transition:border-color .15s;}
+  .field input:hover, .field select:hover{border-color:#3a3a40;}
+  .check-row{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--paper);}
+
+  /* modern checkbox, applies everywhere (Compare tab, kebab menu, goal toggle) */
+  input[type="checkbox"]{
+    appearance:none; -webkit-appearance:none; margin:0; flex-shrink:0;
+    width:18px; height:18px; border:1.5px solid var(--line); border-radius:5px;
+    background:var(--ink); cursor:pointer; position:relative;
+    transition:background .15s, border-color .15s;
+  }
+  input[type="checkbox"]:hover{border-color:var(--muted);}
+  input[type="checkbox"]:checked{background:var(--teal); border-color:var(--teal);}
+  input[type="checkbox"]:checked::after{
+    content:""; position:absolute; left:5px; top:1px; width:5px; height:9px;
+    border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+  }
+  .fire-desc{font-size:12px; color:var(--muted); margin:6px 0 4px; line-height:1.5;}
+  .fx-fresh{font-size:11px; color:var(--muted); margin-top:6px;}
+  .fx-fresh.stale{color:var(--danger);}
+
+  .section-label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--gold); margin:24px 0 12px; display:flex; align-items:center; gap:8px;}
+  .section-label:first-child{margin-top:0;}
+  .section-label::after{content:""; flex:1; height:1px; background:var(--line);}
+
+  .scenario-pair{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:760px){.scenario-pair{grid-template-columns:1fr;}}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px;}
+  .dot.normal{background:var(--teal);} .dot.cons{background:var(--gold);}
+
+  .timeline{display:flex; height:26px; border-radius:5px; overflow:hidden; margin:10px 0; border:1px solid var(--line);}
+  .timeline div{display:flex; align-items:center; justify-content:center; font-size:10px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; color:var(--ink); font-weight:600;}
+  .phase-accum{background:var(--teal);} .phase-bridge{background:var(--danger); color:var(--paper) !important;} .phase-decum{background:var(--gold);}
+
+  table{width:100%; border-collapse:collapse; margin-top:8px;}
+  th,td{text-align:right; padding:8px 10px; font-size:12.5px; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th:first-child, td:first-child{text-align:left;}
+  th{color:var(--muted); font-weight:500; font-size:11px; letter-spacing:0.03em; text-transform:uppercase; font-family:'Inter',sans-serif;}
+  th.grp-normal{color:var(--teal); border-bottom:2px solid var(--teal);}
+  th.grp-cons{color:var(--gold); border-bottom:2px solid var(--gold);}
+  tr.milestone-key td{background:rgba(217,164,65,0.07);}
+  tr.milestone-fail td{color:var(--danger);}
+  .table-scroll{overflow-x:auto;}
+  .scroll-hint{display:none; text-align:center; font-size:11px; color:var(--muted); padding:6px 0 0; opacity:0.7;}
+  @media(max-width:760px){.scroll-hint.show{display:block;}}
+
+  .summary-cards{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:6px; min-width:0;}
+  @media(max-width:900px){.summary-cards{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:600px){.summary-cards{grid-template-columns:minmax(0,1fr);}}
+  .scard{background:var(--panel-3); border-radius:12px; padding:16px; min-width:0; overflow-wrap:break-word; word-break:break-word;}
+  .scard .lbl{font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; overflow-wrap:break-word; word-break:break-word;}
+  .scard .val{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600; overflow-wrap:break-word; word-break:break-word;}
+  .scard .sub{font-size:11px; color:var(--muted); margin-top:4px; overflow-wrap:break-word; word-break:break-word;}
+  .scard.verdict{grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; background:var(--ink); padding:22px 24px; border-radius:14px;}
+  .scard.verdict .headline{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600; line-height:1.5; overflow-wrap:break-word; word-break:break-word;}
+
+  .guidance{background:var(--panel-3); border-left:3px solid var(--gold); border-radius:6px; padding:14px 16px; margin-top:14px; font-size:13px; line-height:1.7;}
+  .guidance b{color:var(--gold); font-family:'IBM Plex Mono',monospace;}
+
+  .chart-wrap{position:relative; background:var(--panel-3); border:1px solid var(--line); border-radius:8px; padding:16px; margin-top:14px;}
+  .legend{display:flex; gap:16px; font-size:11.5px; color:var(--muted); margin-bottom:10px; flex-wrap:wrap; align-items:center;}
+  .legend span{display:flex; align-items:center; gap:6px;}
+  .legend .sw{width:14px; height:3px; display:inline-block; border-radius:2px;}
+  .legend .sw.dashed{background:none; border-top:2px dashed var(--muted); width:14px; height:0;}
+  .legend .sw.goalline{background:none; border-top:2px dashed var(--danger); width:14px; height:0;}
+  .chart-hint{font-size:11px; color:var(--muted); margin-left:auto; opacity:0.75;}
+  .tooltip{position:absolute; pointer-events:none; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; line-height:1.7; white-space:nowrap; opacity:0; transition:opacity .1s; z-index:10; box-shadow:0 8px 24px rgba(0,0,0,0.4); max-width:80vw; overflow-x:auto;}
+  .tooltip.pinned{pointer-events:auto;}
+  .tooltip .t-age{font-family:'Space Grotesk',sans-serif; font-size:14px; margin-bottom:6px; color:var(--paper); display:flex; justify-content:space-between; gap:14px;}
+  .tooltip .t-row{display:flex; justify-content:space-between; gap:18px;}
+  .tooltip .t-phase{color:var(--muted); text-transform:capitalize;}
+  .t-close{cursor:pointer; color:var(--muted); font-family:'Inter',sans-serif;}
+
+  .adv-toggle{display:flex; align-items:center; gap:8px; margin-top:24px; cursor:pointer; user-select:none; font-size:13px; color:var(--muted);}
+  .adv-toggle:hover{color:var(--paper);}
+  .adv-toggle .chev{transition:transform .15s; display:inline-block;}
+  .adv-toggle.open .chev{transform:rotate(90deg);}
+  .adv-body{display:none; margin-top:14px; padding-top:6px;}
+  .adv-body.open{display:block;}
+
+  .asset-row, .phase-row{display:grid; grid-template-columns:1.4fr 0.8fr 1fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
+  .phase-row{grid-template-columns:1fr 1fr 1fr auto;}
+  @media(max-width:900px){.asset-row{grid-template-columns:1fr 1fr;} .phase-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:480px){.asset-row{grid-template-columns:1fr;} .phase-row{grid-template-columns:1fr;}}
+  .row-del{background:transparent; border:1px solid var(--line); color:var(--danger); border-radius:6px; padding:9px 10px; font-size:12px; height:38px;}
+  .row-del:hover{background:var(--danger); color:var(--ink);}
+  .add-row-btn{margin-top:2px;}
+
+  .note{font-size:12px; color:var(--muted); line-height:1.6; margin-top:14px; border-left:2px solid var(--line); padding-left:12px;}
+  .empty{text-align:center; padding:60px 20px; color:var(--muted);}
+  .empty h3{color:var(--paper); margin-bottom:8px; font-size:16px;}
+
+  .preset-row{display:grid; grid-template-columns:1.4fr 1fr 1fr auto; gap:10px; align-items:end; margin-bottom:10px;}
+  @media(max-width:600px){.preset-row{grid-template-columns:1fr 1fr;}}
+
+  .compare-pick{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;}
+  .compare-pick label{display:flex; align-items:center; gap:6px; font-size:12.5px; background:var(--panel-2); border:1px solid var(--line); padding:7px 12px; border-radius:20px; cursor:pointer;}
+  .compare-pick label.pill-radio:has(input:checked){border-color:var(--teal); color:var(--teal);}
+
+  .help-block{background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:20px; margin-bottom:16px;}
+  .help-block h3{font-size:15px; margin-bottom:10px; color:var(--gold);}
+  .formula{background:var(--panel-3); border:1px solid var(--line); border-radius:6px; padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.8; overflow-x:auto; white-space:pre;}
+  .help-block p{font-size:13px; line-height:1.7; color:var(--paper); margin:10px 0;}
+  .help-block .worked{font-size:12.5px; color:var(--muted); line-height:1.8; font-family:'IBM Plex Mono',monospace;}
+
+  .data-actions{display:flex; flex-direction:column; gap:10px; max-width:420px;}
+  footer{max-width:1220px; margin:0 auto; padding:0 20px 60px; color:var(--muted); font-size:12px; line-height:1.7;}
+</style>
+</head>
+<body>
+
+<div class="backdrop" id="backdrop"></div>
+<div class="modal-backdrop" id="modalBackdrop"></div>
+<div class="modal-box" id="modalBox"><div class="modal-msg" id="modalMsg"></div><div class="modal-actions" id="modalActions"></div></div>
+<div class="drawer" id="drawer"></div>
+
+<div class="topbar">
+  <button class="hamburger" id="hamburgerBtn" aria-label="Menu"><span></span></button>
+  <h1>FIRE Calculator</h1>
+  <div class="view-label" id="viewLabel"></div>
+</div>
+
+<div class="wrap" id="viewContainer"></div>
+
+<footer>
+  All figures are in today's MYR (real terms). Inputs are saved to this browser's local storage (IndexedDB) — nothing is sent anywhere. Calculated projections are never stored; they're recomputed each time you open the app. See <a href="#" data-view-link="help">How this is calculated</a> for the full formulas.
+</footer>
+
+<script>
+/* ============================= IndexedDB layer ============================= */
+const DB_NAME = 'fireCalcDB', DB_VERSION = 2;
+let db = null;
+
+function openDB(){
+  return new Promise((resolve,reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (d.objectStoreNames.contains('plans')) d.deleteObjectStore('plans');
+      if (!d.objectStoreNames.contains('profiles')) d.createObjectStore('profiles', {keyPath:'id'});
+      if (!d.objectStoreNames.contains('scenarios')) d.createObjectStore('scenarios', {keyPath:'id'});
+      if (!d.objectStoreNames.contains('presets')) d.createObjectStore('presets', {keyPath:'name'});
+      if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', {keyPath:'id'});
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+function txStore(store, mode){ return db.transaction(store, mode).objectStore(store); }
+function dbGetAll(store){ return new Promise((res,rej) => { const r = txStore(store,'readonly').getAll(); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function dbPut(store, val){ return new Promise((res,rej) => { const r = txStore(store,'readwrite').put(val); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); }); }
+function dbDelete(store, key){ return new Promise((res,rej) => { const r = txStore(store,'readwrite').delete(key); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); }); }
+function dbClear(store){ return new Promise((res,rej) => { const r = txStore(store,'readwrite').clear(); r.onsuccess=()=>res(); r.onerror=()=>rej(r.error); }); }
+
+/* ============================= State ============================= */
+let profiles = [];
+let scenarios = [];
+let presets = [];
+let settings = {};
+let currentView = 'dashboard';
+let dashboardFilter = 'all';
+let editingScenarioId = null;
+let editingProfileId = null;
+let comparePicked = [];
+let wizardStep = 0;
+let profileCounter = 0, scenarioCounter = 0, assetCounter = 0;
+
+const SEED_PRESETS = [
+  { name:'Lean',    multNormal:16, multCons:18, isCustom:false },
+  { name:'Regular', multNormal:25, multCons:28, isCustom:false },
+  { name:'Fat',     multNormal:30, multCons:33, isCustom:false },
+  { name:'Coast',   multNormal:25, multCons:28, isCustom:false },
+  { name:'Barista', multNormal:20, multCons:23, isCustom:false },
+];
+const FIRE_DESCRIPTIONS = {
+  Lean:    'Bare-bones budget, lowest multiple. You retire on less, so the pot needed is smaller.',
+  Regular: 'The standard 4%-rule target — the common baseline most FIRE plans compare against.',
+  Fat:     'A comfortable, higher-spending retirement. Needs the largest pot of the presets.',
+  Coast:   'Stop contributing now and let today\'s balance grow untouched until it reaches the target on its own — you still work, just without saving more.',
+  Barista: 'Retire early from full-time work, but keep light part-time income going to reduce how much the portfolio needs to cover.',
+};
+const SEED_SETTINGS = { id:'global', fxRate:4.20, inflationPct:3, rEquityNormal:10, rEquityCons:7, rEpfNormal:5.5, rEpfCons:4.5 };
+const CHART_PALETTE = ['#14b8a6','#f5a623','#ef4444','#22c55e','#38bdf8','#fb923c','#facc15'];
+
+async function init(){
+  db = await openDB();
+  presets = await dbGetAll('presets');
+  if (!presets.length){ for (const p of SEED_PRESETS) await dbPut('presets', p); presets = await dbGetAll('presets'); }
+  let s = await dbGetAll('settings');
+  if (!s.length){ await dbPut('settings', SEED_SETTINGS); s = [SEED_SETTINGS]; }
+  settings = s[0];
+  if (settings.inflationPct===undefined){ settings.inflationPct = 3; await dbPut('settings', settings); }
+  profiles = await dbGetAll('profiles');
+  profiles.forEach(p => { if (p.planToAge===undefined) p.planToAge=90; if (p.salaryGrowthPct===undefined) p.salaryGrowthPct=0; if (!p.cashSavings) p.cashSavings=[]; if (!p.investments) p.investments=[]; });
+  scenarios = await dbGetAll('scenarios');
+  scenarios.forEach(s => { if (!s.lumpSums) s.lumpSums=[]; });
+  dashboardFilter = profiles.length>1 ? 'all' : (profiles[0] ? profiles[0].id : 'all');
+  renderChrome();
+  setView('dashboard');
+}
+
+const CASH_PRESETS = [
+  { key:'cash', name:'Cash / Savings (no return)', hasReturn:false, defaultReturn:0 },
+  { key:'fd', name:'Fixed Deposit (FD)', hasReturn:true, defaultReturn:3.5 },
+  { key:'asb', name:'ASB / ASNB', hasReturn:true, defaultReturn:5 },
+];
+const INVESTMENT_PRESETS = [
+  { key:'snp500', name:'S&P 500 (VOO/CSPX)', currency:'USD', defaultReturn:10.5 },
+  { key:'custom', name:'Custom investment', currency:'MYR', defaultReturn:null },
+];
+function newProfile(name){
+  profileCounter++; assetCounter++;
+  return {
+    id: 'pr'+Date.now()+profileCounter,
+    name: name || ('Profile '+profileCounter),
+    currentAge: 30,
+    planToAge: 90,
+    epfBalance: 80000, epfEmployeePct: 11, epfEmployerPct: 12, monthlySalary: 8000, salaryGrowthPct: 3,
+    cashSavings: [],
+    investments: [{ id:'a'+assetCounter, name:'S&P 500 (VOO/CSPX)', currency:'USD', balance:20000, monthlyContribution:3000, returnOverride:INVESTMENT_PRESETS.find(p=>p.key==='snp500').defaultReturn }],
+    fxRate: settings.fxRate, fxRateSetAt: new Date().toISOString(),
+  };
+}
+function newProfileBlank(name){
+  profileCounter++; assetCounter++;
+  return {
+    id: 'pr'+Date.now()+profileCounter,
+    name: name || ('Profile '+profileCounter),
+    currentAge: 30,
+    planToAge: 90,
+    epfBalance: 0, epfEmployeePct: 11, epfEmployerPct: 12, monthlySalary: 0, salaryGrowthPct: 0,
+    cashSavings: [],
+    investments: [],
+    fxRate: settings.fxRate, fxRateSetAt: new Date().toISOString(),
+  };
+}
+function newScenario(profile, fireType, name){
+  scenarioCounter++;
+  const preset = presets.find(p => p.name===fireType) || presets[0];
+  const startAge = profile ? profile.currentAge : 30;
+  return {
+    id: 'sc'+Date.now()+scenarioCounter,
+    profileId: profile ? profile.id : null,
+    name: name || (fireType + ' scenario'),
+    fireType: fireType,
+    workingToAge: Math.max(startAge+1, 55),
+    expensePhases: [{ age:startAge, monthlyExpense:4500, growthPct:0 }],
+    incomePhases: [{ age:startAge, monthlyIncome:0, growthPct:0 }],
+    baristaIncome: 2000, baristaFluctuation: 15, baristaEndAge: 65,
+    rEquityNormal: settings.rEquityNormal, rEquityCons: settings.rEquityCons,
+    rEpfNormal: settings.rEpfNormal, rEpfCons: settings.rEpfCons,
+    multNormal: preset.multNormal, multCons: preset.multCons,
+    goalEnabled: false, goalAmount: 2000000, goalAge: 50,
+    lumpSums: [],
+  };
+}
+
+async function saveProfile(p){ await dbPut('profiles', p); }
+async function saveScenario(s){ await dbPut('scenarios', s); }
+
+function fmt(n){ if (n===null||n===undefined||isNaN(n)) return '—'; const sign=n<0?'-':''; n=Math.abs(Math.round(n)); return sign+n.toLocaleString('en-MY'); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function daysSince(iso){ if (!iso) return null; const d=(Date.now()-new Date(iso).getTime())/86400000; return Math.round(d); }
+
+function phaseValueAt(phases, age, valKey){
+  const sorted = [...phases].sort((a,b)=>a.age-b.age);
+  if (!sorted.length) return 0;
+  let active = sorted[0];
+  for (const p of sorted){ if (p.age<=age) active=p; else break; }
+  const growth = (active.growthPct||0)/100;
+  const years = Math.max(0, age-active.age);
+  return active[valKey]*Math.pow(1+growth, years);
+}
+
+/* ============================= Projection engine ============================= */
+function toReal(nominalPct, inflationPct){
+  const n=(nominalPct||0)/100, i=(inflationPct||0)/100;
+  return (((1+n)/(1+i))-1)*100;
+}
+function realHint(nominalPct){
+  const inflation = settings.inflationPct||0;
+  const real = toReal(parseFloat(nominalPct)||0, inflation);
+  return `≈ ${real.toFixed(2)}% real after ${inflation}% inflation`;
+}
+
+function project(profile, scenario, growthScenario){
+  const inflation = settings.inflationPct||0;
+  const rEquityGlobal = toReal(growthScenario==='normal'?scenario.rEquityNormal:scenario.rEquityCons, inflation)/100;
+  const rEpf = toReal(growthScenario==='normal'?scenario.rEpfNormal:scenario.rEpfCons, inflation)/100;
+  const isCoast = scenario.fireType==='Coast';
+  const isBarista = scenario.fireType==='Barista';
+  const baristaFluct = growthScenario==='normal'?0:(scenario.baristaFluctuation/100);
+  const baristaMonthlyEff = isBarista ? scenario.baristaIncome*(1-baristaFluct) : 0;
+  const salaryGrowth = toReal(profile.salaryGrowthPct||0, inflation)/100;
+
+  // Cash/savings and investments are tracked as separate buckets so withdrawals can drain
+  // the lowest-return bucket first instead of a single blended number going negative.
+  const cashBuckets = (profile.cashSavings||[]).map(a => ({
+    id:a.id, balance:a.balance||0, monthlyContribution:a.monthlyContribution||0,
+    realReturn: a.hasReturn ? toReal(a.returnOverride||0, inflation)/100 : 0,
+  }));
+  const investBuckets = (profile.investments||[]).map(a => {
+    const bal = a.currency==='USD' ? (a.balance||0)*profile.fxRate : (a.balance||0);
+    const r = (a.returnOverride!==null && a.returnOverride!==undefined && a.returnOverride!=='') ? toReal(a.returnOverride, inflation)/100 : rEquityGlobal;
+    return { id:a.id, balance:bal, monthlyContribution:a.monthlyContribution||0, realReturn:r };
+  });
+  const nonEpfBuckets = [...cashBuckets, ...investBuckets];
+  const invBalance0 = nonEpfBuckets.reduce((s,b)=>s+b.balance,0);
+  const rInvest = invBalance0>0 ? nonEpfBuckets.reduce((s,b)=>s+b.balance*b.realReturn,0)/invBalance0 : rEquityGlobal;
+
+  function drawFrom(pool, netW){
+    // pool: array of {balance, realReturn} refs, mutated in place. Drains lowest-return first.
+    // Returns unmet amount (0 if fully covered). Never lets a balance go negative.
+    const order = pool.slice().sort((a,b)=>a.realReturn-b.realReturn);
+    let remaining = netW;
+    for (const b of order){
+      if (remaining<=0) break;
+      const draw = Math.min(b.balance, remaining);
+      b.balance -= draw; remaining -= draw;
+    }
+    return Math.max(remaining,0);
+  }
+
+  let epfBal = profile.epfBalance;
+  let currentSalary = profile.monthlySalary;
+  const rows = [];
+  const startAge = profile.currentAge;
+  const endAge = profile.planToAge || 90;
+  for (let age=startAge; age<=endAge; age++){
+    let phase;
+    if (age<scenario.workingToAge && !isCoast) phase='accumulation';
+    else if (age<55) phase='bridge';
+    else phase='decumulation';
+
+    (scenario.lumpSums||[]).forEach(ls => {
+      if (ls.age!==age) return;
+      if (nonEpfBuckets.length) nonEpfBuckets[0].balance += (ls.amount||0);
+      else epfBal += (ls.amount||0); // no non-EPF bucket exists to hold it; fall back to EPF rather than dropping it
+    });
+
+    const monthlyExpense = phaseValueAt(scenario.expensePhases, age, 'monthlyExpense');
+    const monthlyIncome = phaseValueAt(scenario.incomePhases, age, 'monthlyIncome');
+    const annualExpense = monthlyExpense*12, annualOtherIncome = monthlyIncome*12;
+    const multiple = growthScenario==='normal'?scenario.multNormal:scenario.multCons;
+    const nonEpfTotal = nonEpfBuckets.reduce((s,b)=>s+b.balance,0);
+    const standardTarget = (annualExpense-annualOtherIncome)*multiple;
+    const fireTarget = scenario.goalEnabled ? scenario.goalAmount : standardTarget;
+
+    const row = { age, epf:epfBal, nonEpf:nonEpfTotal, combined:epfBal+nonEpfTotal, phase, monthlyExpense, monthlyIncome, standardTarget, fireTarget, shortfall:0, epfLocked:phase==='bridge' };
+    rows.push(row);
+
+    if (phase==='accumulation'){
+      const annualEpfContribution = currentSalary*((profile.epfEmployeePct+profile.epfEmployerPct)/100)*12;
+      epfBal = epfBal*(1+rEpf) + annualEpfContribution;
+      nonEpfBuckets.forEach(b => { b.balance = b.balance*(1+b.realReturn) + (isCoast?0:b.monthlyContribution*12); });
+      currentSalary *= (1+salaryGrowth);
+    } else if (phase==='bridge'){
+      epfBal = epfBal*(1+rEpf); // legally locked pre-55: cannot help cover a shortfall here
+      nonEpfBuckets.forEach(b => { b.balance = b.balance*(1+b.realReturn); });
+      const baristaActive = isBarista && age<scenario.baristaEndAge;
+      const netW = Math.max(annualExpense-annualOtherIncome-(baristaActive?baristaMonthlyEff*12:0),0);
+      row.shortfall = drawFrom(nonEpfBuckets, netW);
+    } else {
+      epfBal = epfBal*(1+rEpf);
+      nonEpfBuckets.forEach(b => { b.balance = b.balance*(1+b.realReturn); });
+      const baristaActive = isBarista && age<scenario.baristaEndAge;
+      const netW = Math.max(annualExpense-annualOtherIncome-(baristaActive?baristaMonthlyEff*12:0),0);
+      const epfRef = { balance:epfBal, realReturn:rEpf };
+      const shortfall = drawFrom([epfRef, ...nonEpfBuckets], netW);
+      epfBal = epfRef.balance;
+      row.shortfall = shortfall;
+    }
+  }
+
+  let achievedAge=null;
+  for (const r of rows){ if (r.combined>=r.fireTarget){ achievedAge=r.age; break; } }
+  let depletionAge=null;
+  for (const r of rows){ if (r.shortfall>0){ depletionAge=r.age; break; } }
+
+  let goalCheck = null;
+  if (scenario.goalEnabled){
+    const rowAtGoalAge = rows.find(r => r.age===scenario.goalAge) || rows[rows.length-1];
+    goalCheck = { age:scenario.goalAge, combined:rowAtGoalAge.combined, achieved:rowAtGoalAge.combined>=scenario.goalAmount, gap:scenario.goalAmount-rowAtGoalAge.combined };
+  }
+
+  return { rows, achievedAge, depletionAge, rInvest, goalCheck };
+}
+
+/* ---- actionable guidance (§4) ---- */
+function findExtraContribution(profile, scenario){
+  const base = project(profile, scenario, 'conservative');
+  if (base.achievedAge) return 0;
+  const hasInvest = profile.investments && profile.investments.length;
+  const hasCash = profile.cashSavings && profile.cashSavings.length;
+  if (!hasInvest && !hasCash) return null;
+  let lo=0, hi=100000, found=null;
+  for (let i=0;i<28;i++){
+    const mid=(lo+hi)/2;
+    const p2=JSON.parse(JSON.stringify(profile));
+    if (hasInvest) p2.investments[0].monthlyContribution += mid; else p2.cashSavings[0].monthlyContribution += mid;
+    const r=project(p2, scenario, 'conservative');
+    if (r.achievedAge){ hi=mid; found=mid; } else lo=mid;
+  }
+  return found!==null ? Math.round(found/50)*50 : null;
+}
+function findRequiredWorkingAge(profile, scenario){
+  const base = project(profile, scenario, 'conservative');
+  if (base.achievedAge) return scenario.workingToAge;
+  for (let age=scenario.workingToAge+1; age<=(profile.planToAge||90); age++){
+    const sc2 = Object.assign({}, scenario, {workingToAge:age});
+    const r = project(profile, sc2, 'conservative');
+    if (r.achievedAge) return age;
+  }
+  return null;
+}
+
+/* ============================= Chrome (topbar/drawer) ============================= */
+function renderChrome(){
+  document.getElementById('hamburgerBtn').addEventListener('click', toggleDrawer);
+  document.getElementById('backdrop').addEventListener('click', closeDrawer);
+  document.querySelectorAll('[data-view-link]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); setView(el.dataset.viewLink); }));
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.kebab-menu') && !e.target.closest('[data-kebab-toggle]')){
+      document.querySelectorAll('.kebab-menu.open').forEach(m=>m.classList.remove('open'));
+    }
+  });
+}
+function bindKebabToggles(container){
+  container.querySelectorAll('[data-kebab-toggle]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = document.getElementById('kebabMenu-'+btn.dataset.kebabToggle);
+      if (!menu) return;
+      const isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.kebab-menu.open').forEach(m=>m.classList.remove('open'));
+      if (!isOpen) menu.classList.add('open');
+    });
+  });
+}
+function toggleDrawer(){ document.getElementById('drawer').classList.toggle('open'); document.getElementById('backdrop').classList.toggle('open'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('backdrop').classList.remove('open'); }
+
+/* In-app modal replacing native confirm()/alert() — sandboxed preview iframes commonly block those,
+   which silently no-ops the action (e.g. Delete). This renders its own overlay instead. */
+let modalResolve = null;
+function closeModal(){
+  document.getElementById('modalBackdrop').classList.remove('open');
+  document.getElementById('modalBox').classList.remove('open');
+}
+function showModal(message, {confirmText='OK', cancelText=null} = {}){
+  return new Promise(resolve => {
+    modalResolve = resolve;
+    document.getElementById('modalMsg').textContent = message;
+    const actions = document.getElementById('modalActions');
+    actions.innerHTML = '';
+    if (cancelText){
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'ghost';
+      cancelBtn.textContent = cancelText;
+      cancelBtn.addEventListener('click', () => { closeModal(); modalResolve=null; resolve(false); });
+      actions.appendChild(cancelBtn);
+    }
+    const okBtn = document.createElement('button');
+    okBtn.className = cancelText ? 'danger-ghost' : 'primary';
+    okBtn.textContent = confirmText;
+    okBtn.addEventListener('click', () => { closeModal(); modalResolve=null; resolve(true); });
+    actions.appendChild(okBtn);
+    document.getElementById('modalBackdrop').classList.add('open');
+    document.getElementById('modalBox').classList.add('open');
+  });
+}
+function appConfirm(message, confirmText='Confirm'){ return showModal(message, {confirmText, cancelText:'Cancel'}); }
+function appAlert(message){ return showModal(message, {confirmText:'OK'}); }
+
+const NAV_ICONS = {
+  dashboard: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  profiles: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="7" r="2.4"/><path d="M15.5 13.2c2.4.4 4.5 2.6 4.5 5.8"/></svg>',
+  compare: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M4 9l3-3M4 9L1 9" transform="translate(1,0)"/><path d="M12 5v14M12 5l-3 3M12 5l3 3"/><path d="M20 19V9"/></svg>',
+  presets: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 000-3l2-1.5-2-3.4-2.3.8a7.6 7.6 0 00-2.6-1.5L14 2h-4l-.5 2.4a7.6 7.6 0 00-2.6 1.5l-2.3-.8-2 3.4 2 1.5a7.6 7.6 0 000 3l-2 1.5 2 3.4 2.3-.8a7.6 7.6 0 002.6 1.5L10 22h4l.5-2.4a7.6 7.6 0 002.6-1.5l2.3.8 2-3.4z"/></svg>',
+  data: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
+  help: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 014.9.8c0 1.7-2.4 2-2.4 3.7"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>',
+};
+function renderDrawer(){
+  const profile = profiles.find(p=>p.id===dashboardFilter);
+  const items = [];
+  items.push({view:'dashboard', label:'Dashboard', sub: dashboardFilter==='all' ? 'All FIRE reports' : ('Reports for '+(profile?profile.name:''))});
+  items.push({view:'profiles', label:'Profiles', sub: profiles.length+' '+(profiles.length===1?'person':'people')+' · add or edit'});
+  items.push({view:'compare', label:'Compare scenarios', sub:'Overlay 2+ strategies'});
+  items.push({view:'presets', label:'Presets & Defaults', sub:'FIRE-type multiples, default assumptions'});
+  items.push({view:'data', label:'Data', sub:'Backup, restore, export'});
+  items.push({view:'help', label:'How this is calculated', sub:'Formulas & a worked example'});
+  const drawer = document.getElementById('drawer');
+  drawer.innerHTML = '<div class="dhead"><h2>FIRE Calculator</h2><button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">✕</button></div>' +
+    '<div class="drawer-scroll">' +
+    items.map(it => '<div class="navitem '+(currentView===it.view?'active':'')+'" data-view="'+it.view+'"><span class="n-icon">'+(NAV_ICONS[it.view]||'')+'</span><div class="n-text"><div class="n-label">'+escapeHtml(it.label)+'</div><div class="n-sub">'+escapeHtml(it.sub)+'</div></div></div>').join('') +
+    '</div>';
+  drawer.querySelectorAll('.navitem').forEach(el => el.addEventListener('click', () => { setView(el.dataset.view); closeDrawer(); }));
+  document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+}
+
+function setView(v, id){
+  currentView = v;
+  if (v==='scenarioWizard'){ editingScenarioId = id; wizardStep = 0; }
+  if (v==='profileWizard'){ editingProfileId = id; wizardStep = 0; }
+  const labels = { profiles:'Profiles', dashboard:'Dashboard', scenarioWizard:'Edit scenario', profileWizard:'Edit profile', compare:'Compare scenarios', presets:'Presets & Defaults', data:'Data', help:'How this is calculated' };
+  const labelEl = document.getElementById('viewLabel');
+  labelEl.textContent = labels[v] || '';
+  labelEl.classList.toggle('show', v !== 'dashboard');
+  renderDrawer();
+  renderView();
+  window.scrollTo(0,0);
+}
+
+function renderView(){
+  const c = document.getElementById('viewContainer');
+  if (currentView==='profiles') renderProfilesView(c);
+  else if (currentView==='dashboard') renderDashboardView(c);
+  else if (currentView==='scenarioWizard') renderScenarioWizard(c);
+  else if (currentView==='profileWizard') renderProfileWizard(c);
+  else if (currentView==='compare') renderCompareView(c);
+  else if (currentView==='presets') renderPresetsView(c);
+  else if (currentView==='data') renderDataView(c);
+  else if (currentView==='help') renderHelpView(c);
+}
+
+/* ============================= Profiles view ============================= */
+function renderProfilesView(container){
+  container.innerHTML = `
+    <div class="note" style="margin:0 0 18px;">Profiles hold each person's static facts — age, EPF, salary, investments, FX rate. No FIRE charts live here; open <a href="#" data-view-link="dashboard">Dashboard</a> to see reports.</div>
+    <div class="toolbar"><button class="primary" id="addProfileBtn">+ Add profile</button></div>
+    <div id="profilesHolder"></div>
+  `;
+  container.querySelector('[data-view-link]').addEventListener('click', e => { e.preventDefault(); setView('dashboard'); });
+  const holder = document.getElementById('profilesHolder');
+  profiles.forEach(p => {
+    const n = scenarios.filter(s=>s.profileId===p.id).length;
+    const el = document.createElement('div');
+    el.className = 'plan';
+    el.innerHTML = `<div class="plan-head">
+      <div class="titles"><h2>${escapeHtml(p.name)}</h2><span class="badge">Age ${p.currentAge}</span><span class="badge">${n} scenario${n===1?'':'s'}</span></div>
+      <div class="head-actions">
+        <div class="action-set-desktop">
+          <button class="ghost small" data-viewreports="${p.id}">View reports</button>
+          <button class="primary small" data-editp="${p.id}">Edit</button>
+          ${profiles.length>1?`<button class="danger-ghost small" data-delp="${p.id}">Delete</button>`:''}
+        </div>
+        <button class="kebab-btn ghost small" data-kebab-toggle="pr-${p.id}" aria-label="Actions" aria-haspopup="true">⋮</button>
+        <div class="kebab-menu" id="kebabMenu-pr-${p.id}">
+          <button class="ghost" data-viewreports="${p.id}">View reports</button>
+          <button class="ghost" data-editp="${p.id}">Edit</button>
+          ${profiles.length>1?`<button class="danger-ghost" data-delp="${p.id}">Delete</button>`:''}
+        </div>
+      </div></div>
+      <div class="plan-body" style="padding:16px 20px;">
+        <div class="summary-cards" style="margin-bottom:0;">
+          <div class="scard"><div class="lbl">EPF balance</div><div class="val mono">${fmt(p.epfBalance)}</div></div>
+          <div class="scard"><div class="lbl">Monthly salary</div><div class="val mono">${fmt(p.monthlySalary)}</div></div>
+          <div class="scard"><div class="lbl">Cash &amp; savings</div><div class="val mono">${(p.cashSavings||[]).length} account${(p.cashSavings||[]).length===1?'':'s'}</div></div>
+          <div class="scard"><div class="lbl">Investments</div><div class="val mono">${(p.investments||[]).length} asset${(p.investments||[]).length===1?'':'s'}</div></div>
+          <div class="scard"><div class="lbl">FX rate</div><div class="val mono">${p.fxRate}</div></div>
+        </div>
+      </div>`;
+    holder.appendChild(el);
+  });
+  document.getElementById('addProfileBtn').addEventListener('click', async () => {
+    const p = newProfileBlank('New profile');
+    profiles.push(p); await saveProfile(p);
+    const sc = newScenario(p, 'Regular');
+    scenarios.push(sc); await saveScenario(sc);
+    setView('profileWizard', p.id);
+  });
+  holder.querySelectorAll('[data-viewreports]').forEach(b => b.addEventListener('click', () => { dashboardFilter=b.dataset.viewreports; setView('dashboard'); }));
+  holder.querySelectorAll('[data-editp]').forEach(b => b.addEventListener('click', () => setView('profileWizard', b.dataset.editp)));
+  bindKebabToggles(holder);
+  holder.querySelectorAll('[data-delp]').forEach(b => b.addEventListener('click', async () => {
+    if (!(await appConfirm('Delete this profile and all its scenarios? This cannot be undone.', 'Delete'))) return;
+    const scIds = scenarios.filter(s=>s.profileId===b.dataset.delp).map(s=>s.id);
+    for (const id of scIds) await dbDelete('scenarios', id);
+    scenarios = scenarios.filter(s=>s.profileId!==b.dataset.delp);
+    await dbDelete('profiles', b.dataset.delp);
+    profiles = profiles.filter(p=>p.id!==b.dataset.delp);
+    if (dashboardFilter===b.dataset.delp) dashboardFilter = profiles.length>1?'all':(profiles[0]?profiles[0].id:'all');
+    setView('profiles');
+  }));
+}
+
+/* ============================= Dashboard (browse FIRE reports) ============================= */
+function renderDashboardView(container){
+  if (!profiles.length){
+    container.innerHTML = `<div class="empty"><h3>Let's set up your first profile</h3><div>Add a profile — age, EPF, salary, cash &amp; investments — then a scenario to see your FIRE report.</div>
+      <div class="toolbar" style="justify-content:center; margin-top:16px;"><button class="primary" id="emptyAddProfileBtn">+ Add profile</button></div></div>`;
+    document.getElementById('emptyAddProfileBtn').addEventListener('click', async () => {
+      const p = newProfileBlank('New profile');
+      profiles.push(p); await saveProfile(p);
+      const sc = newScenario(p, 'Regular');
+      scenarios.push(sc); await saveScenario(sc);
+      dashboardFilter = p.id;
+      setView('profileWizard', p.id);
+    });
+    return;
+  }
+  if (!profiles.find(p=>p.id===dashboardFilter) && dashboardFilter!=='all') dashboardFilter = profiles.length>1?'all':profiles[0].id;
+  const visibleProfiles = dashboardFilter==='all' ? profiles : profiles.filter(p=>p.id===dashboardFilter);
+  const addTargetProfile = profiles.find(p=>p.id===dashboardFilter) || profiles[0];
+
+  container.innerHTML = `
+    ${profiles.length>1 ? `<div class="compare-pick" id="filterPills">
+      <label class="pill-radio"><input type="radio" name="dfilter" value="all" ${dashboardFilter==='all'?'checked':''}> All profiles</label>
+      ${profiles.map(p=>`<label class="pill-radio"><input type="radio" name="dfilter" value="${p.id}" ${dashboardFilter===p.id?'checked':''}> ${escapeHtml(p.name)}</label>`).join('')}
+    </div>` : ''}
+    <div class="toolbar">
+      <button class="primary" id="addScenarioBtn">+ Add scenario${profiles.length>1?' for '+escapeHtml(addTargetProfile.name):''}</button>
+    </div>
+    <div id="scenariosContainer"></div>
+    <div id="emptyState" class="empty" style="display:none;"><h3>No scenarios yet</h3><div>Add a scenario to model Lean, Regular, Fat, Coast, or Barista FIRE.</div></div>
+  `;
+  const pillsHolder = document.getElementById('filterPills');
+  if (pillsHolder) pillsHolder.querySelectorAll('input[name="dfilter"]').forEach(r => r.addEventListener('change', () => { dashboardFilter=r.value; setView('dashboard'); }));
+
+  document.getElementById('addScenarioBtn').addEventListener('click', async () => {
+    const sc = newScenario(addTargetProfile, 'Regular');
+    scenarios.push(sc); await saveScenario(sc);
+    setView('scenarioWizard', sc.id);
+  });
+
+  const holder = document.getElementById('scenariosContainer');
+  let anyScenario = false;
+
+  visibleProfiles.forEach(profile => {
+    const profScenarios = scenarios.filter(s=>s.profileId===profile.id);
+    if (!profScenarios.length) return;
+    anyScenario = true;
+    if (dashboardFilter==='all' && profiles.length>1){
+      const head = document.createElement('div');
+      head.className = 'section-label';
+      head.textContent = profile.name;
+      holder.appendChild(head);
+    }
+    profScenarios.forEach(scenario => {
+      const normal = project(profile, scenario,'normal'), cons = project(profile, scenario,'conservative');
+      const achieved = normal.achievedAge && cons.achievedAge;
+      const el = document.createElement('div');
+      el.className = 'plan';
+      el.innerHTML = `
+        <div class="plan-head">
+          <div class="titles">
+            <h2>${escapeHtml(scenario.name)}</h2>
+            <span class="badge">${scenario.fireType} FIRE</span>
+            <span class="badge ${achieved?'status-achieved':'status-short'}">${achieved?'On track':'Shortfall'}</span>
+            ${scenario.goalEnabled ? `<span class="badge" style="color:var(--danger);border-color:var(--danger);">Goal: RM${fmt(scenario.goalAmount)} by ${scenario.goalAge}</span>` : ''}
+          </div>
+          <div class="head-actions">
+            <div class="action-set-desktop">
+              <label class="check-row" style="margin-right:6px;"><input type="checkbox" class="compare-check" data-scid="${scenario.id}" ${comparePicked.includes(scenario.id)?'checked':''}> Compare</label>
+              <button class="ghost small" data-edit="${scenario.id}">Edit</button>
+              <button class="ghost small" data-dup="${scenario.id}">Duplicate</button>
+              <button class="danger-ghost small" data-del="${scenario.id}">Delete</button>
+            </div>
+            <button class="kebab-btn ghost small" data-kebab-toggle="sc-${scenario.id}" aria-label="Actions" aria-haspopup="true">⋮</button>
+            <div class="kebab-menu" id="kebabMenu-sc-${scenario.id}">
+              <label class="kebab-check"><input type="checkbox" class="compare-check" data-scid="${scenario.id}" ${comparePicked.includes(scenario.id)?'checked':''}> Compare</label>
+              <button class="ghost" data-edit="${scenario.id}">Edit</button>
+              <button class="ghost" data-dup="${scenario.id}">Duplicate</button>
+              <button class="danger-ghost" data-del="${scenario.id}">Delete</button>
+            </div>
+          </div>
+        </div>
+        <div class="plan-body" id="body-${scenario.id}"></div>
+      `;
+      holder.appendChild(el);
+      renderScenarioDashboardBody(document.getElementById('body-'+scenario.id), profile, scenario, normal, cons);
+    });
+  });
+  document.getElementById('emptyState').style.display = anyScenario ? 'none' : 'block';
+
+  holder.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => setView('scenarioWizard', b.dataset.edit)));
+  holder.querySelectorAll('[data-dup]').forEach(b => b.addEventListener('click', () => duplicateScenario(b.dataset.dup)));
+  holder.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => deleteScenarioUi(b.dataset.del)));
+  holder.querySelectorAll('.compare-check').forEach(b => b.addEventListener('change', () => {
+    const id = b.dataset.scid;
+    if (b.checked){ if (!comparePicked.includes(id)) comparePicked.push(id); } else comparePicked = comparePicked.filter(x=>x!==id);
+    holder.querySelectorAll('.compare-check[data-scid="'+id+'"]').forEach(el=>{ el.checked = b.checked; });
+  }));
+  bindKebabToggles(holder);
+}
+
+function renderScenarioDashboardBody(el, profile, scenario, normal, cons){
+  const achieved = normal.achievedAge && cons.achievedAge;
+  let goalLine = '';
+  if (scenario.goalEnabled && normal.goalCheck){
+    const gc = normal.goalCheck;
+    goalLine = `<div class="scard" style="grid-column:1 / -1;"><div class="lbl">Goal check — RM${fmt(scenario.goalAmount)} by age ${scenario.goalAge}</div>
+      <div class="val mono" style="${gc.achieved?'color:var(--good)':'color:var(--danger)'}">${gc.achieved ? 'On pace — projected RM'+fmt(gc.combined)+' at that age' : 'Short by RM'+fmt(gc.gap)+' at that age (Normal case)'}</div></div>`;
+  }
+  let guidance = '';
+  if (!cons.achievedAge){
+    const extra = findExtraContribution(profile, scenario);
+    const reqAge = findRequiredWorkingAge(profile, scenario);
+    const parts = [];
+    if (extra) parts.push('save an extra <b>RM'+fmt(extra)+'/month</b>');
+    if (reqAge && reqAge!==scenario.workingToAge) parts.push('work until age <b>'+reqAge+'</b> instead of '+scenario.workingToAge);
+    guidance = `<div class="guidance"><b>To close the gap</b> (Conservative case): ${parts.length?parts.join(', or '):'no adjustment found within a reasonable range — consider a lower FIRE-type multiple or reduced expenses'}.</div>`;
+  }
+  el.innerHTML = `
+    <div class="summary-cards">
+      <div class="scard verdict"><div class="headline">${achieved
+        ? `On track — reaches its target by age <b>${Math.max(normal.achievedAge,cons.achievedAge)}</b> even under the Conservative case.`
+        : `Shortfall — ${normal.achievedAge?'reaches target under Normal assumptions at age '+normal.achievedAge+', but':'does not reach target by 90 under Normal assumptions, and'} does not reach target under Conservative assumptions.`}</div></div>
+      <div class="scard"><div class="lbl"><span class="dot normal"></span>Target today (Normal)</div><div class="val mono">${fmt(normal.rows[0].fireTarget)}</div><div class="sub">Conservative: ${fmt(cons.rows[0].fireTarget)}${scenario.goalEnabled?' (goal-based)':' (standard multiple)'}</div></div>
+      <div class="scard"><div class="lbl">Achieved age</div><div class="val mono"><span class="dot normal"></span>${normal.achievedAge??'90+'} &nbsp; <span class="dot cons"></span>${cons.achievedAge??'90+'}</div><div class="sub">Normal vs Conservative</div></div>
+      <div class="scard"><div class="lbl">Combined pot at 90</div><div class="val mono">${fmt(normal.rows[normal.rows.length-1].combined)}</div><div class="sub">Conservative: ${fmt(cons.rows[cons.rows.length-1].combined)}</div></div>
+      <div class="scard"><div class="lbl">Depletion risk</div><div class="val mono" style="${cons.depletionAge?'color:var(--danger)':''}">${cons.depletionAge?'Age '+cons.depletionAge:'None to 90'}</div><div class="sub">Normal: ${normal.depletionAge?'Age '+normal.depletionAge:'None to 90'}</div></div>
+      ${goalLine}
+    </div>
+    ${guidance}
+    <div class="chart-wrap">
+      <div class="legend">
+        <span><span class="sw" style="background:var(--teal)"></span>Combined — Normal</span>
+        <span><span class="sw" style="background:var(--gold)"></span>Combined — Conservative</span>
+        <span><span class="sw ${scenario.goalEnabled?'goalline':'dashed'}"></span>${scenario.goalEnabled?'Goal target':'FIRE target (standard)'}</span>
+        <span class="chart-hint">Hover (tap on mobile) for exact values</span>
+      </div>
+      <div style="position:relative;">${renderChart(scenario,normal,cons)}<div class="tooltip" id="tooltip-${scenario.id}"></div></div>
+    </div>
+    <div class="section-label">Phase timeline</div>
+    ${renderTimeline(profile, scenario)}
+    <div class="section-label">Milestones</div>
+    <div class="table-scroll">${renderMilestoneTable(profile, scenario,normal,cons)}</div>
+    <div class="scroll-hint show">← scroll table for more →</div>
+  `;
+  setupChartTooltip(el, scenario, normal, cons);
+}
+
+/* ---- chart + tooltip (shared) ---- */
+function renderChart(scenario, normal, cons){
+  const isMobile = window.innerWidth<=768;
+  const w=1080,h=isMobile?420:280,padL=60,padR=20,padT=16,padB=isMobile?40:30;
+  const allVals=[...normal.rows.map(r=>r.combined),...cons.rows.map(r=>r.combined),...normal.rows.map(r=>r.fireTarget),0];
+  const maxV=Math.max(...allVals)*1.08, minV=Math.min(0,Math.min(...allVals));
+  const ages=normal.rows.map(r=>r.age);
+  const xScale=age=>padL+(age-ages[0])/(ages[ages.length-1]-ages[0])*(w-padL-padR);
+  const yScale=v=>padT+(1-(v-minV)/(maxV-minV))*(h-padT-padB);
+  const pathFor=(rows,key)=>rows.map((r,i)=>`${i===0?'M':'L'}${xScale(r.age).toFixed(1)},${yScale(r[key]).toFixed(1)}`).join(' ');
+  const zeroY=yScale(0);
+  let ticks='';
+  for (let a=ages[0]; a<=ages[ages.length-1]; a+=10){
+    const x=xScale(a);
+    ticks+=`<line x1="${x}" y1="${padT}" x2="${x}" y2="${h-padB}" stroke="#26262b" stroke-width="1"/>`;
+    ticks+=`<text x="${x}" y="${h-10}" fill="#8a8a90" font-size="${isMobile?12:10}" font-family="IBM Plex Mono" text-anchor="middle">${a}</text>`;
+  }
+  const targetColor = scenario.goalEnabled ? '#f43f5e' : '#8a8a90';
+  return `<svg id="chart-svg-${scenario.id}" viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block; cursor:crosshair; touch-action:pan-y;"
+    data-padl="${padL}" data-padr="${padR}" data-w="${w}" data-age0="${ages[0]}" data-age1="${ages[ages.length-1]}">
+    ${ticks}
+    <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="#26262b" stroke-width="1" stroke-dasharray="2,3"/>
+    <path d="${pathFor(normal.rows,'fireTarget')}" fill="none" stroke="${targetColor}" stroke-width="1.4" stroke-dasharray="5,4" opacity="0.8"/>
+    <path d="${pathFor(cons.rows,'combined')}" fill="none" stroke="#f5a623" stroke-width="2"/>
+    <path d="${pathFor(normal.rows,'combined')}" fill="none" stroke="#14b8a6" stroke-width="2.4"/>
+    <line id="crosshair-${scenario.id}" x1="0" y1="${padT}" x2="0" y2="${h-padB}" stroke="#f7f7f5" stroke-width="1" opacity="0" stroke-dasharray="3,3"/>
+  </svg>`;
+}
+
+function setupChartTooltip(el, scenario, normal, cons){
+  const svg = document.getElementById('chart-svg-'+scenario.id);
+  const tooltip = document.getElementById('tooltip-'+scenario.id);
+  const crosshair = document.getElementById('crosshair-'+scenario.id);
+  if (!svg||!tooltip) return;
+  const padL=parseFloat(svg.dataset.padl), padR=parseFloat(svg.dataset.padr), vbW=parseFloat(svg.dataset.w);
+  const age0=parseFloat(svg.dataset.age0), age1=parseFloat(svg.dataset.age1);
+  let pinned = false;
+
+  function showAt(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scaleX = vbW/rect.width;
+    const xPx = (clientX-rect.left)*scaleX;
+    let frac = (xPx-padL)/(vbW-padL-padR);
+    frac = Math.max(0, Math.min(1, frac));
+    const age = Math.round(age0+frac*(age1-age0));
+    const idx = age-age0;
+    const rn = normal.rows[idx], rc = cons.rows[idx];
+    if (!rn||!rc) return;
+    const xAtAge = padL+(age-age0)/(age1-age0)*(vbW-padL-padR);
+    crosshair.setAttribute('x1',xAtAge); crosshair.setAttribute('x2',xAtAge); crosshair.setAttribute('opacity','0.5');
+    tooltip.innerHTML = `
+      <div class="t-age"><span>Age ${age} <span class="t-phase">— ${rn.phase}</span></span><span class="t-close" data-close-tip="1">✕</span></div>
+      <div class="t-row"><span>Monthly expense</span><span>${fmt(rn.monthlyExpense)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>EPF</span><span>${fmt(rn.epf)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>Investments</span><span>${fmt(rn.nonEpf)}</span></div>
+      <div class="t-row"><span><span class="dot normal"></span>Combined</span><span>${fmt(rn.combined)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>EPF</span><span>${fmt(rc.epf)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>Investments</span><span>${fmt(rc.nonEpf)}</span></div>
+      <div class="t-row"><span><span class="dot cons"></span>Combined</span><span>${fmt(rc.combined)}</span></div>
+      <div class="t-row"><span>Target</span><span>${fmt(rn.fireTarget)}</span></div>
+      ${rn.shortfall>0?`<div class="t-row" style="color:var(--danger)"><span>${rn.epfLocked?'EPF locked, unmet (Normal)':'Shortfall (Normal)'}</span><span>${fmt(rn.shortfall)}</span></div>`:''}
+      ${rc.shortfall>0?`<div class="t-row" style="color:var(--danger)"><span>${rc.epfLocked?'EPF locked, unmet (Cons.)':'Shortfall (Cons.)'}</span><span>${fmt(rc.shortfall)}</span></div>`:''}
+    `;
+    tooltip.style.opacity='1';
+    const wrapRect = svg.parentElement.getBoundingClientRect();
+    let left = (clientX-wrapRect.left)+16;
+    if (left+220 > wrapRect.width) left = (clientX-wrapRect.left)-236;
+    if (left < 0) left = 4;
+    tooltip.style.left = left+'px'; tooltip.style.top = '4px';
+    const closeBtn = tooltip.querySelector('[data-close-tip]');
+    if (closeBtn) closeBtn.addEventListener('click', () => { pinned=false; hide(); });
+  }
+  function hide(){ tooltip.style.opacity='0'; tooltip.classList.remove('pinned'); crosshair.setAttribute('opacity','0'); }
+
+  svg.addEventListener('mousemove', e => { if (!pinned) showAt(e.clientX); });
+  svg.addEventListener('mouseleave', () => { if (!pinned) hide(); });
+  svg.addEventListener('click', e => { pinned=true; tooltip.classList.add('pinned'); showAt(e.clientX); });
+  svg.addEventListener('touchstart', e => { if (e.touches[0]){ pinned=true; tooltip.classList.add('pinned'); showAt(e.touches[0].clientX); } }, {passive:true});
+  svg.addEventListener('touchmove', e => { if (e.touches[0]){ e.preventDefault(); pinned=true; tooltip.classList.add('pinned'); showAt(e.touches[0].clientX); } }, {passive:false});
+  document.addEventListener('click', e => { if (pinned && !el.contains(e.target)){ pinned=false; hide(); } });
+}
+
+function renderTimeline(profile, scenario){
+  const start=profile.currentAge, end=profile.planToAge||90, total=end-start;
+  const isCoast = scenario.fireType==='Coast';
+  const accumEnd = isCoast?start:Math.min(scenario.workingToAge,55);
+  const bridgeEnd=55;
+  const accumPct=Math.max(0,(accumEnd-start)/total*100);
+  const bridgePct=Math.max(0,(Math.min(bridgeEnd,end)-Math.max(accumEnd,start))/total*100);
+  const decumPct=Math.max(0,100-accumPct-bridgePct);
+  const decumStart = bridgePct>0 ? bridgeEnd : accumEnd;
+  const segs = [];
+  if (accumPct>0) segs.push({color:'var(--teal)', label:'Accumulation', range:start+' – '+accumEnd});
+  if (bridgePct>0) segs.push({color:'var(--danger)', label:'Bridge (EPF locked)', range:accumEnd+' – '+bridgeEnd});
+  if (decumPct>0) segs.push({color:'var(--gold)', label:'Decumulation', range:decumStart+' – '+end});
+  return `<div class="timeline">
+    ${accumPct>0?`<div class="phase-accum" style="width:${accumPct}%">Accumulation</div>`:''}
+    ${bridgePct>0?`<div class="phase-bridge" style="width:${bridgePct}%">Bridge (EPF locked)</div>`:''}
+    ${decumPct>0?`<div class="phase-decum" style="width:${decumPct}%">Decumulation</div>`:''}
+  </div>
+  <div class="timeline-stack">
+    ${segs.map(s=>`<div class="ts-row"><span class="ts-dot" style="background:${s.color}"></span><span class="ts-label">${s.label}</span><span class="ts-range">${s.range}</span></div>`).join('')}
+  </div>
+  <div class="note">Age ${start} → ${accumEnd>start?accumEnd:start}${accumEnd>start?' accumulation':''}${bridgePct>0?`, then ${accumEnd} → 55 bridge`:''}, then ${decumStart} → ${end} decumulation.</div>`;
+}
+
+function renderMilestoneTable(profile, scenario, normal, cons){
+  const endAge = profile.planToAge||90;
+  const milestoneAges = new Set();
+  for (let a=Math.ceil(profile.currentAge/5)*5; a<=endAge; a+=5) milestoneAges.add(a);
+  milestoneAges.add(profile.currentAge); milestoneAges.add(Math.min(scenario.workingToAge,endAge)); milestoneAges.add(55);
+  if (normal.achievedAge) milestoneAges.add(normal.achievedAge);
+  if (cons.achievedAge) milestoneAges.add(cons.achievedAge);
+  if (scenario.goalEnabled) milestoneAges.add(scenario.goalAge);
+  milestoneAges.add(endAge);
+  const sorted = [...milestoneAges].filter(a=>a>=profile.currentAge&&a<=endAge).sort((a,b)=>a-b);
+  const rowsN = Object.fromEntries(normal.rows.map(r=>[r.age,r]));
+  const rowsC = Object.fromEntries(cons.rows.map(r=>[r.age,r]));
+  const trs = sorted.map(age => {
+    const rn=rowsN[age], rc=rowsC[age];
+    const isKey = age===55||age===scenario.workingToAge||age===normal.achievedAge||age===cons.achievedAge||(scenario.goalEnabled&&age===scenario.goalAge);
+    const fail = rc.shortfall>0||rn.shortfall>0;
+    const worst = rc.shortfall>rn.shortfall ? rc : rn;
+    const status = worst.shortfall>0
+      ? (worst.epfLocked ? 'EPF locked — RM'+fmt(worst.shortfall)+' short' : 'Pot depleted — RM'+fmt(worst.shortfall)+' short')
+      : '—';
+    return `<tr class="${isKey?'milestone-key':''} ${fail?'milestone-fail':''}">
+      <td>${age}${age===normal.achievedAge?' ★ Normal target hit':''}${age===cons.achievedAge?' ★ Conservative target hit':''}${scenario.goalEnabled&&age===scenario.goalAge?' ◆ goal age':''}</td>
+      <td style="text-transform:capitalize;">${rn.phase}</td>
+      <td class="mono">${fmt(rn.monthlyExpense)}</td>
+      <td class="mono" style="${worst.shortfall>0?'color:var(--danger);':''}">${status}</td>
+      <td class="mono">${fmt(rn.epf)}</td><td class="mono">${fmt(rn.nonEpf)}</td><td class="mono">${fmt(rn.combined)}</td>
+      <td class="mono">${fmt(rc.epf)}</td><td class="mono">${fmt(rc.nonEpf)}</td><td class="mono">${fmt(rc.combined)}</td>
+    </tr>`;
+  }).join('');
+  return `<table><thead>
+    <tr><th rowspan="2">Age</th><th rowspan="2">Phase</th><th rowspan="2">Monthly<br>expense</th><th rowspan="2">Status</th>
+      <th class="grp-normal" colspan="3">Normal</th><th class="grp-cons" colspan="3">Conservative</th></tr>
+    <tr><th>EPF</th><th>Investments</th><th>Combined</th><th>EPF</th><th>Investments</th><th>Combined</th></tr>
+  </thead><tbody>${trs}</tbody></table>`;
+}
+
+/* ============================= scenario CRUD ============================= */
+async function duplicateScenario(id){
+  const s = scenarios.find(ss=>ss.id===id);
+  const copy = JSON.parse(JSON.stringify(s));
+  scenarioCounter++; copy.id = 'sc'+Date.now()+scenarioCounter;
+  copy.name = s.name+' (copy)';
+  scenarios.push(copy); await saveScenario(copy); renderView();
+}
+async function deleteScenarioUi(id){
+  if (!(await appConfirm('Delete this scenario? This removes it from local storage permanently.', 'Delete'))) return;
+  scenarios = scenarios.filter(s=>s.id!==id);
+  comparePicked = comparePicked.filter(x=>x!==id);
+  await dbDelete('scenarios', id);
+  renderView();
+}
+
+/* ============================= Edit Scenario view ============================= */
+/* ============================= Wizard shell (shared by Profile + Scenario wizards) ============================= */
+function field(label,type,key,value,step){ return `<div class="field"><label for="f_${key}">${label}</label><input id="f_${key}" data-field="${key}" type="${type}" value="${value}" ${step?`step="${step}"`:''}></div>`; }
+function selectField(label,key,value,options){ return `<div class="field"><label for="f_${key}">${label}</label><select id="f_${key}" data-field="${key}">${options.map(o=>`<option value="${o}" ${o===value?'selected':''}>${o}</option>`).join('')}</select></div>`; }
+function phaseRowHtml(prefix, idx, phase, valLabel, showDel){
+  const valKey = prefix==='exp'?'monthlyExpense':'monthlyIncome';
+  return `<div class="phase-row">
+    <div class="field"><label for="ph_${prefix}_age_${idx}">From age</label><input id="ph_${prefix}_age_${idx}" data-${prefix}-idx="${idx}" data-${prefix}-field="age" type="number" value="${phase.age}"></div>
+    <div class="field"><label for="ph_${prefix}_val_${idx}">${valLabel}</label><input id="ph_${prefix}_val_${idx}" data-${prefix}-idx="${idx}" data-${prefix}-field="${valKey}" type="number" value="${phase[valKey]}"></div>
+    <div class="field"><label for="ph_${prefix}_gr_${idx}">Annual growth %</label><input id="ph_${prefix}_gr_${idx}" data-${prefix}-idx="${idx}" data-${prefix}-field="growthPct" type="number" step="0.1" value="${phase.growthPct||0}"></div>
+    ${showDel ? `<button class="row-del del-${prefix}-btn" data-${prefix}-idx="${idx}">Remove</button>` : '<span></span>'}
+  </div>`;
+}
+function lumpRowHtml(idx, l){
+  return `<div class="phase-row">
+    <div class="field"><label for="lp_age_${idx}">At age</label><input id="lp_age_${idx}" data-lump-idx="${idx}" data-lump-field="age" type="number" value="${l.age}"></div>
+    <div class="field"><label for="lp_amt_${idx}">Amount (MYR, +/-)</label><input id="lp_amt_${idx}" data-lump-idx="${idx}" data-lump-field="amount" type="number" value="${l.amount}"></div>
+    <div class="field"><label for="lp_lbl_${idx}">Label</label><input id="lp_lbl_${idx}" data-lump-idx="${idx}" data-lump-field="label" type="text" value="${escapeHtml(l.label||'')}"></div>
+    <button class="row-del del-lump-btn" data-lump-idx="${idx}">Remove</button>
+  </div>`;
+}
+
+function renderWizardShell(container, opts){
+  container.innerHTML = `
+    <div class="back-link" id="wizBack">← Back to Scenarios</div>
+    <div class="wiz-progress">
+      ${opts.stepLabels.map((lbl,i)=>`<button type="button" class="wiz-dot ${i===opts.stepIndex?'active':(i<opts.stepIndex?'done':'')}" data-wiz-jump="${i}" title="${escapeHtml(lbl)}">${i+1}</button>`).join('')}
+    </div>
+    <div class="wiz-step-title">${escapeHtml(opts.title)}</div>
+    <div class="wiz-body">${opts.bodyHtml}</div>
+    <div class="wiz-nav">
+      ${opts.stepIndex>0?'<button class="ghost" id="wizBackStep">← Back</button>':'<span></span>'}
+      <div style="display:flex; gap:8px;">
+        ${opts.showDelete?'<button class="danger-ghost" id="wizDelete">Delete</button>':''}
+        <button class="primary" id="wizNextStep">${opts.nextLabel||'Next'}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('wizBack').addEventListener('click', () => setView('dashboard'));
+  container.querySelectorAll('[data-wiz-jump]').forEach(b => b.addEventListener('click', () => opts.onJump(parseInt(b.dataset.wizJump))));
+  const backBtn = document.getElementById('wizBackStep'); if (backBtn) backBtn.addEventListener('click', opts.onBack);
+  document.getElementById('wizNextStep').addEventListener('click', opts.onNext);
+  const delBtn = document.getElementById('wizDelete'); if (delBtn) delBtn.addEventListener('click', opts.onDelete);
+}
+function wizReviewHtml(rows){
+  return `<div class="wiz-review">${rows.map(([q,a])=>`<div class="wiz-review-row"><div class="wiz-review-q">${escapeHtml(q)}</div><div class="wiz-review-a mono">${escapeHtml(String(a))}</div></div>`).join('')}</div>`;
+}
+
+/* ============================= Profile wizard ============================= */
+const PROFILE_WIZ_STEPS = ['Basics','EPF & salary','Cash & savings','Investments','Currency','Review'];
+
+function cashRowHtml(a){
+  return `<div class="asset-row">
+    <div class="field"><label>Name</label><input data-cash-id="${a.id}" data-cash-field="name" type="text" value="${escapeHtml(a.name)}"></div>
+    <div class="field"><label>Balance today (RM)</label><input data-cash-id="${a.id}" data-cash-field="balance" type="number" value="${a.balance}"></div>
+    <div class="field"><label>Monthly top-up (RM)</label><input data-cash-id="${a.id}" data-cash-field="monthlyContribution" type="number" value="${a.monthlyContribution}"></div>
+    <div class="field"><label class="check-row" style="height:38px;"><input data-cash-id="${a.id}" data-cash-field="hasReturn" type="checkbox" ${a.hasReturn?'checked':''}> Has a return</label></div>
+    ${a.hasReturn?`<div class="field"><label>Return %/yr (nominal)</label><input data-cash-id="${a.id}" data-cash-field="returnOverride" type="number" value="${a.returnOverride??0}"><div class="hint">${realHint(a.returnOverride)}</div></div>`:'<span></span>'}
+    <button class="row-del del-cash-btn" data-cash-id="${a.id}">Remove</button>
+  </div>`;
+}
+function investRowHtml(a){
+  return `<div class="asset-row">
+    <div class="field"><label>Name</label><input data-inv-id="${a.id}" data-inv-field="name" type="text" value="${escapeHtml(a.name)}"></div>
+    <div class="field"><label>Currency</label><select data-inv-id="${a.id}" data-inv-field="currency">
+      <option value="MYR" ${a.currency==='MYR'?'selected':''}>MYR</option><option value="USD" ${a.currency==='USD'?'selected':''}>USD</option>
+    </select></div>
+    <div class="field"><label>Balance today</label><input data-inv-id="${a.id}" data-inv-field="balance" type="number" value="${a.balance}"></div>
+    <div class="field"><label>Monthly contribution (RM)</label><input data-inv-id="${a.id}" data-inv-field="monthlyContribution" type="number" value="${a.monthlyContribution}"></div>
+    <div class="field"><label>Return % override (nominal)</label><input data-inv-id="${a.id}" data-inv-field="returnOverride" type="number" value="${a.returnOverride??''}" placeholder="auto">${(a.returnOverride!==null&&a.returnOverride!==undefined&&a.returnOverride!=='')?`<div class="hint">${realHint(a.returnOverride)}</div>`:'<div class="hint">Auto uses the scenario\'s investment return assumption (set per-scenario, in Assumptions)</div>'}</div>
+    <button class="row-del del-invest-btn" data-inv-id="${a.id}">Remove</button>
+  </div>`;
+}
+function renderProfileReview(profile){
+  const rows = [
+    ['What should we call this profile?', profile.name],
+    ['How old are you today?', profile.currentAge],
+    ['Plan to what age? (life expectancy)', profile.planToAge],
+    ['What is your EPF balance today (RM)?', fmt(profile.epfBalance)],
+    ['What is your monthly salary (RM)?', fmt(profile.monthlySalary)],
+    ['Employee EPF contribution %?', profile.epfEmployeePct+'%'],
+    ['Employer EPF contribution %?', profile.epfEmployerPct+'%'],
+    ['Expected annual salary growth % (nominal)?', profile.salaryGrowthPct+'%'],
+  ];
+  const cashRows = profile.cashSavings.map(a=>[`Cash/savings: ${a.name}`, fmt(a.balance)+' RM, +'+fmt(a.monthlyContribution)+'/mo'+(a.hasReturn?', '+a.returnOverride+'% return':', no return')]);
+  const investRows = profile.investments.map(a=>[`Investment: ${a.name}`, fmt(a.balance)+' '+a.currency+', +'+fmt(a.monthlyContribution)+' RM/mo'+(a.returnOverride!=null?', '+a.returnOverride+'% return':', auto return')]);
+  rows.push(...cashRows, ...investRows, ["What is today's MYR/USD exchange rate?", profile.fxRate]);
+  return wizReviewHtml(rows);
+}
+
+function renderProfileWizard(container){
+  const profile = profiles.find(p=>p.id===editingProfileId);
+  if (!profile){ setView('profiles'); return; }
+  if (profile.planToAge===undefined) profile.planToAge=90;
+  if (profile.salaryGrowthPct===undefined) profile.salaryGrowthPct=0;
+  if (!profile.cashSavings) profile.cashSavings=[];
+  if (!profile.investments) profile.investments=[];
+
+  const step = wizardStep;
+  let body='';
+  if (step===0){
+    body = `
+      <div class="wiz-q">${field('What should we call this profile?','text','name',profile.name)}</div>
+      <div class="wiz-q">${field('How old are you today?','number','currentAge',profile.currentAge)}</div>
+      <div class="wiz-q">${field('Plan to what age? (life expectancy)','number','planToAge',profile.planToAge)}</div>
+    `;
+  } else if (step===1){
+    body = `
+      <div class="wiz-q">${field('What is your EPF balance today (RM)?','number','epfBalance',profile.epfBalance)}</div>
+      <div class="wiz-q">${field('What is your monthly salary (RM)?','number','monthlySalary',profile.monthlySalary)}</div>
+      <div class="wiz-q">${field('Employee EPF contribution %?','number','epfEmployeePct',profile.epfEmployeePct)}</div>
+      <div class="wiz-q">${field('Employer EPF contribution %?','number','epfEmployerPct',profile.epfEmployerPct)}</div>
+      <div class="wiz-q">${field('Expected annual salary growth % (nominal)?','number','salaryGrowthPct',profile.salaryGrowthPct)}<div class="hint">${realHint(profile.salaryGrowthPct)}</div></div>
+    `;
+  } else if (step===2){
+    body = `
+      <p class="note" style="margin-top:0;">Cash, fixed deposits, ASB/ASNB — anything without market risk. Turn off "has a return" for pure cash sitting idle; it will never grow but also never counts against you.</p>
+      <div id="cashListHolder">${profile.cashSavings.map(a=>cashRowHtml(a)).join('') || '<div class="note">No cash/savings added yet.</div>'}</div>
+      <div class="toolbar" style="margin:10px 0 0;">
+        ${CASH_PRESETS.map(p=>`<button class="ghost small add-cash-preset" data-preset-key="${p.key}">+ ${escapeHtml(p.name)}</button>`).join('')}
+      </div>
+    `;
+  } else if (step===3){
+    body = `
+      <p class="note" style="margin-top:0;">Market-linked investments — equities, unit trusts, ETFs.</p>
+      <div id="investListHolder">${profile.investments.map(a=>investRowHtml(a)).join('') || '<div class="note">No investments added yet.</div>'}</div>
+      <div class="toolbar" style="margin:10px 0 0;">
+        ${INVESTMENT_PRESETS.map(p=>`<button class="ghost small add-invest-preset" data-preset-key="${p.key}">+ ${escapeHtml(p.name)}</button>`).join('')}
+      </div>
+    `;
+  } else if (step===4){
+    const stale = daysSince(profile.fxRateSetAt);
+    body = `
+      <div class="wiz-q">${field("What is today's MYR/USD exchange rate?",'number','fxRate',profile.fxRate,'0.01')}</div>
+      <div class="fx-fresh ${stale!==null&&stale>90?'stale':''}">${stale===null?'Rate freshness not tracked yet.':('Rate set '+stale+' day'+(stale===1?'':'s')+' ago'+(stale>90?' — consider refreshing it.':'.'))}</div>
+    `;
+  } else if (step===5){
+    body = renderProfileReview(profile);
+  }
+
+  renderWizardShell(container, {
+    title: PROFILE_WIZ_STEPS[step], stepIndex: step, stepLabels: PROFILE_WIZ_STEPS, bodyHtml: body,
+    nextLabel: step===PROFILE_WIZ_STEPS.length-1 ? 'Done' : 'Next',
+    showDelete: profiles.length>1,
+    onJump: (i) => { wizardStep=i; renderView(); window.scrollTo(0,0); },
+    onBack: () => { wizardStep=Math.max(0,step-1); renderView(); window.scrollTo(0,0); },
+    onNext: () => { if (step===PROFILE_WIZ_STEPS.length-1) setView('dashboard'); else { wizardStep=step+1; renderView(); window.scrollTo(0,0); } },
+    onDelete: async () => {
+      if (!(await appConfirm('Delete this profile and all its scenarios? This cannot be undone.', 'Delete'))) return;
+      const scIds = scenarios.filter(s=>s.profileId===profile.id).map(s=>s.id);
+      for (const id of scIds) await dbDelete('scenarios', id);
+      scenarios = scenarios.filter(s=>s.profileId!==profile.id);
+      await dbDelete('profiles', profile.id);
+      profiles = profiles.filter(p=>p.id!==profile.id);
+      dashboardFilter = profiles.length>1?'all':(profiles[0]?profiles[0].id:'all');
+      setView(profiles.length?'dashboard':'profiles');
+    },
+  });
+
+  container.querySelectorAll('input[data-field]').forEach(inp => inp.addEventListener('change', () => {
+    const f = inp.dataset.field;
+    const val = inp.type==='number' ? (parseFloat(inp.value)||0) : inp.value;
+    if (f==='fxRate' && val!==profile.fxRate) profile.fxRateSetAt = new Date().toISOString();
+    profile[f]=val; saveProfile(profile);
+  }));
+  container.querySelectorAll('[data-cash-field]').forEach(inp => inp.addEventListener('change', () => {
+    const a = profile.cashSavings.find(x=>x.id===inp.dataset.cashId);
+    const f = inp.dataset.cashField;
+    if (f==='hasReturn') a.hasReturn = inp.checked;
+    else if (f==='name') a.name = inp.value;
+    else if (f==='returnOverride') a.returnOverride = inp.value===''?0:parseFloat(inp.value);
+    else a[f] = parseFloat(inp.value)||0;
+    saveProfile(profile); renderView();
+  }));
+  container.querySelectorAll('.del-cash-btn').forEach(b => b.addEventListener('click', () => {
+    profile.cashSavings = profile.cashSavings.filter(a=>a.id!==b.dataset.cashId); saveProfile(profile); renderView();
+  }));
+  container.querySelectorAll('.add-cash-preset').forEach(b => b.addEventListener('click', () => {
+    const preset = CASH_PRESETS.find(p=>p.key===b.dataset.presetKey);
+    assetCounter++;
+    profile.cashSavings.push({ id:'c'+assetCounter, name:preset.name, balance:0, monthlyContribution:0, hasReturn:preset.hasReturn, returnOverride:preset.defaultReturn });
+    saveProfile(profile); renderView();
+  }));
+  container.querySelectorAll('[data-inv-field]').forEach(inp => inp.addEventListener('change', () => {
+    const a = profile.investments.find(x=>x.id===inp.dataset.invId);
+    const f = inp.dataset.invField;
+    if (f==='returnOverride') a.returnOverride = inp.value===''?null:parseFloat(inp.value);
+    else if (f==='name'||f==='currency') a[f]=inp.value;
+    else a[f] = parseFloat(inp.value)||0;
+    saveProfile(profile);
+  }));
+  container.querySelectorAll('.del-invest-btn').forEach(b => b.addEventListener('click', () => {
+    profile.investments = profile.investments.filter(a=>a.id!==b.dataset.invId); saveProfile(profile); renderView();
+  }));
+  container.querySelectorAll('.add-invest-preset').forEach(b => b.addEventListener('click', () => {
+    const preset = INVESTMENT_PRESETS.find(p=>p.key===b.dataset.presetKey);
+    assetCounter++;
+    profile.investments.push({ id:'a'+assetCounter, name:preset.name, currency:preset.currency, balance:0, monthlyContribution:0, returnOverride:preset.defaultReturn });
+    saveProfile(profile); renderView();
+  }));
+}
+
+/* ============================= Scenario wizard ============================= */
+function scenarioWizSteps(scenario){
+  const steps = ['Basics','Living costs','Other income'];
+  if (scenario.fireType==='Barista') steps.push('Barista income');
+  steps.push('One-time amounts','Goal','Assumptions','Review');
+  return steps;
+}
+function renderScenarioReview(profile, scenario){
+  const cashTotal = (profile.cashSavings||[]).reduce((s,a)=>s+(a.balance||0),0);
+  const investTotal = (profile.investments||[]).reduce((s,a)=>s+(a.balance||0),0);
+  const profileRows = [
+    ['Profile', profile.name],
+    ['Current age → plan to age', profile.currentAge+' → '+(profile.planToAge??90)],
+    ['EPF balance / monthly salary', 'RM'+fmt(profile.epfBalance)+' / RM'+fmt(profile.monthlySalary)+' per mo'],
+    ['Salary growth %/yr (nominal)', (profile.salaryGrowthPct??0)+'%'],
+    ['Cash & savings', (profile.cashSavings||[]).length+' account(s), RM'+fmt(cashTotal)+' total'],
+    ['Investments', (profile.investments||[]).length+' asset(s), '+fmt(investTotal)+' total (native currency)'],
+    ["MYR/USD rate", profile.fxRate],
+  ];
+  const rows = [
+    ['What should we call this scenario?', scenario.name],
+    ['Which FIRE type are you testing?', scenario.fireType],
+    ['Until what age will you keep working / contributing?', scenario.workingToAge],
+  ];
+  scenario.expensePhases.forEach(p=>rows.push([`Living cost from age ${p.age}`, fmt(p.monthlyExpense)+'/mo RM'+(p.growthPct?', +'+p.growthPct+'%/yr':'')]));
+  scenario.incomePhases.forEach(p=>rows.push([`Other income from age ${p.age}`, fmt(p.monthlyIncome)+'/mo RM'+(p.growthPct?', +'+p.growthPct+'%/yr':'')]));
+  if (scenario.fireType==='Barista'){
+    rows.push(['Barista income per month (RM)?', fmt(scenario.baristaIncome)]);
+    rows.push(['Until what age does barista income continue?', scenario.baristaEndAge]);
+  }
+  (scenario.lumpSums||[]).forEach(l=>rows.push([`One-time amount at age ${l.age}${l.label?' ('+l.label+')':''}`, (l.amount>=0?'+':'')+fmt(l.amount)+' RM']));
+  rows.push(['Use a fixed RM goal?', scenario.goalEnabled?('Yes — RM'+fmt(scenario.goalAmount)+' by age '+scenario.goalAge):'No']);
+  rows.push(['Investment return %/yr (nominal), Normal / Conservative', scenario.rEquityNormal+'% / '+scenario.rEquityCons+'%']);
+  rows.push(['EPF dividend %/yr (nominal), Normal / Conservative', scenario.rEpfNormal+'% / '+scenario.rEpfCons+'%']);
+  rows.push(['Withdrawal multiple, Normal / Conservative', scenario.multNormal+'× / '+scenario.multCons+'×']);
+  return `<div class="section-label" style="margin-top:0;">Profile</div>${wizReviewHtml(profileRows)}
+    <div class="section-label">Scenario</div>${wizReviewHtml(rows)}`;
+}
+
+function renderScenarioWizard(container){
+  const scenario = scenarios.find(s=>s.id===editingScenarioId);
+  const profile = scenario ? profiles.find(p=>p.id===scenario.profileId) : null;
+  if (!scenario || !profile){ setView('dashboard'); return; }
+  if (!scenario.lumpSums) scenario.lumpSums=[];
+  const steps = scenarioWizSteps(scenario);
+  if (wizardStep>=steps.length) wizardStep=steps.length-1;
+  const stepKey = steps[wizardStep];
+
+  let body='';
+  if (stepKey==='Basics'){
+    body = `
+      <div class="wiz-q"><div class="field"><label for="scProfileSelect">Which profile is this scenario for?</label>
+        <select id="scProfileSelect">${profiles.map(p=>`<option value="${p.id}" ${p.id===profile.id?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+      </div></div>
+      <div class="wiz-q">${field('What should we call this scenario?','text','name',scenario.name)}</div>
+      <div class="wiz-q">${selectField('Which FIRE type are you testing?','fireType',scenario.fireType, presets.map(p=>p.name))}</div>
+      <div class="fire-desc">${FIRE_DESCRIPTIONS[scenario.fireType]||''}</div>
+      <div class="wiz-q">${field('Until what age will you keep working / contributing?','number','workingToAge',scenario.workingToAge)}</div>
+    `;
+  } else if (stepKey==='Living costs'){
+    body = `
+      <p class="note" style="margin-top:0;">Add a row whenever your spending is expected to change.</p>
+      <div id="expHolder">${scenario.expensePhases.map((p,idx)=>phaseRowHtml('exp',idx,p,'Monthly expense (MYR)',scenario.expensePhases.length>1)).join('')}</div>
+      <button class="ghost small add-row-btn" id="addExpBtn">+ Add expense change</button>
+    `;
+  } else if (stepKey==='Other income'){
+    body = `
+      <p class="note" style="margin-top:0;">Rental, pension, part-time work — anything that offsets expenses.</p>
+      <div id="incHolder">${scenario.incomePhases.map((p,idx)=>phaseRowHtml('inc',idx,p,'Monthly income (MYR)',scenario.incomePhases.length>1)).join('')}</div>
+      <button class="ghost small add-row-btn" id="addIncBtn">+ Add income change</button>
+    `;
+  } else if (stepKey==='Barista income'){
+    body = `
+      <div class="wiz-q">${field('Barista income per month (RM)?','number','baristaIncome',scenario.baristaIncome)}</div>
+      <div class="wiz-q">${field('Until what age does barista income continue?','number','baristaEndAge',scenario.baristaEndAge)}</div>
+      <div class="wiz-q">${field('Cut applied in the Conservative case (%)?','number','baristaFluctuation',scenario.baristaFluctuation)}</div>
+    `;
+  } else if (stepKey==='One-time amounts'){
+    body = `
+      <p class="note" style="margin-top:0;">Property sale, downsizing, inheritance, big one-off cost. Positive = windfall, negative = cost.</p>
+      <div id="lumpHolder">${(scenario.lumpSums||[]).map((l,idx)=>lumpRowHtml(idx,l)).join('') || '<div class="note">No one-time amounts added.</div>'}</div>
+      <button class="ghost small add-row-btn" id="addLumpBtn">+ Add one-time amount</button>
+    `;
+  } else if (stepKey==='Goal'){
+    body = `
+      <div class="wiz-q"><label class="check-row"><input id="goalEnabled" type="checkbox" ${scenario.goalEnabled?'checked':''}> Use a fixed RM goal instead of the multiple-based target</label></div>
+      ${scenario.goalEnabled?`
+      <div class="wiz-q">${field('What is your goal amount (RM)?','number','goalAmount',scenario.goalAmount)}</div>
+      <div class="wiz-q">${field('By what age do you want to hit it?','number','goalAge',scenario.goalAge)}</div>`:''}
+    `;
+  } else if (stepKey==='Assumptions'){
+    body = `
+      <p class="note" style="margin-top:0;">Defaults are usually fine — only change these if you have a specific view. Rates are nominal; the app converts to real using your inflation assumption of <strong>${settings.inflationPct??3}%/yr</strong> (Presets &amp; Defaults).</p>
+      <div class="scenario-pair">
+        <div class="field"><label><span class="dot normal"></span>Investment return %/yr (nominal), Normal</label><input data-field="rEquityNormal" type="number" value="${scenario.rEquityNormal}"><div class="hint">${realHint(scenario.rEquityNormal)}</div></div>
+        <div class="field"><label><span class="dot cons"></span>Investment return %/yr (nominal), Conservative</label><input data-field="rEquityCons" type="number" value="${scenario.rEquityCons}"><div class="hint">${realHint(scenario.rEquityCons)}</div></div>
+        <div class="field"><label><span class="dot normal"></span>EPF dividend %/yr (nominal), Normal</label><input data-field="rEpfNormal" type="number" value="${scenario.rEpfNormal}"><div class="hint">${realHint(scenario.rEpfNormal)}</div></div>
+        <div class="field"><label><span class="dot cons"></span>EPF dividend %/yr (nominal), Conservative</label><input data-field="rEpfCons" type="number" value="${scenario.rEpfCons}"><div class="hint">${realHint(scenario.rEpfCons)}</div></div>
+        <div class="field"><label><span class="dot normal"></span>Withdrawal multiple (×), Normal</label><input data-field="multNormal" type="number" value="${scenario.multNormal}"></div>
+        <div class="field"><label><span class="dot cons"></span>Withdrawal multiple (×), Conservative</label><input data-field="multCons" type="number" value="${scenario.multCons}"></div>
+      </div>
+    `;
+  } else if (stepKey==='Review'){
+    body = renderScenarioReview(profile, scenario);
+  }
+
+  renderWizardShell(container, {
+    title: stepKey, stepIndex: wizardStep, stepLabels: steps, bodyHtml: body,
+    nextLabel: wizardStep===steps.length-1 ? 'Done' : 'Next',
+    showDelete: true,
+    onJump: (i) => { wizardStep=i; renderView(); window.scrollTo(0,0); },
+    onBack: () => { wizardStep=Math.max(0,wizardStep-1); renderView(); window.scrollTo(0,0); },
+    onNext: () => { if (wizardStep===steps.length-1) setView('dashboard'); else { wizardStep=wizardStep+1; renderView(); window.scrollTo(0,0); } },
+    onDelete: () => deleteScenarioUi(scenario.id),
+  });
+
+  const profSelect = document.getElementById('scProfileSelect');
+  if (profSelect) profSelect.addEventListener('change', () => {
+    scenario.profileId = profSelect.value; saveScenario(scenario); renderView();
+  });
+  container.querySelectorAll('input[data-field], select[data-field]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const f = inp.dataset.field;
+      const val = inp.type==='number' ? (parseFloat(inp.value)||0) : inp.value;
+      if (f==='fireType'){
+        scenario.fireType = val;
+        const preset = presets.find(pp=>pp.name===val);
+        if (preset){ scenario.multNormal=preset.multNormal; scenario.multCons=preset.multCons; }
+      } else scenario[f]=val;
+      saveScenario(scenario); renderView();
+    });
+  });
+  const goalChk = document.getElementById('goalEnabled');
+  if (goalChk) goalChk.addEventListener('change', e => { scenario.goalEnabled=e.target.checked; saveScenario(scenario); renderView(); });
+  container.querySelectorAll('[data-exp-field]').forEach(inp => inp.addEventListener('change', () => {
+    scenario.expensePhases[parseInt(inp.dataset.expIdx)][inp.dataset.expField] = parseFloat(inp.value)||0; saveScenario(scenario);
+  }));
+  container.querySelectorAll('.del-exp-btn').forEach(b => b.addEventListener('click', () => {
+    if (scenario.expensePhases.length>1){ scenario.expensePhases.splice(parseInt(b.dataset.expIdx),1); saveScenario(scenario); renderView(); }
+  }));
+  const addExpBtn = document.getElementById('addExpBtn');
+  if (addExpBtn) addExpBtn.addEventListener('click', () => {
+    const last = scenario.expensePhases[scenario.expensePhases.length-1];
+    scenario.expensePhases.push({age:last.age+10, monthlyExpense:last.monthlyExpense, growthPct:last.growthPct||0});
+    saveScenario(scenario); renderView();
+  });
+  container.querySelectorAll('[data-inc-field]').forEach(inp => inp.addEventListener('change', () => {
+    scenario.incomePhases[parseInt(inp.dataset.incIdx)][inp.dataset.incField] = parseFloat(inp.value)||0; saveScenario(scenario);
+  }));
+  container.querySelectorAll('.del-inc-btn').forEach(b => b.addEventListener('click', () => {
+    if (scenario.incomePhases.length>1){ scenario.incomePhases.splice(parseInt(b.dataset.incIdx),1); saveScenario(scenario); renderView(); }
+  }));
+  const addIncBtn = document.getElementById('addIncBtn');
+  if (addIncBtn) addIncBtn.addEventListener('click', () => {
+    const last = scenario.incomePhases[scenario.incomePhases.length-1];
+    scenario.incomePhases.push({age:last.age+10, monthlyIncome:last.monthlyIncome, growthPct:last.growthPct||0});
+    saveScenario(scenario); renderView();
+  });
+  container.querySelectorAll('[data-lump-field]').forEach(inp => inp.addEventListener('change', () => {
+    const idx = parseInt(inp.dataset.lumpIdx); const f = inp.dataset.lumpField;
+    scenario.lumpSums[idx][f] = f==='label' ? inp.value : (parseFloat(inp.value)||0);
+    saveScenario(scenario);
+  }));
+  container.querySelectorAll('.del-lump-btn').forEach(b => b.addEventListener('click', () => {
+    scenario.lumpSums.splice(parseInt(b.dataset.lumpIdx),1); saveScenario(scenario); renderView();
+  }));
+  const addLumpBtn = document.getElementById('addLumpBtn');
+  if (addLumpBtn) addLumpBtn.addEventListener('click', () => {
+    scenario.lumpSums.push({age: profile.currentAge+10, amount:0, label:''});
+    saveScenario(scenario); renderView();
+  });
+}
+
+
+/* ============================= Compare view ============================= */
+function renderCompareView(container){
+  if (!profiles.length){ setView('profiles'); return; }
+  const compareProfileId = profiles.find(p=>p.id===dashboardFilter) ? dashboardFilter : profiles[0].id;
+  const profile = profiles.find(p=>p.id===compareProfileId);
+  const profScenarios = scenarios.filter(s=>s.profileId===profile.id);
+  container.innerHTML = `
+    ${profiles.length>1?`<div class="compare-pick" id="cmpProfilePills">${profiles.map(p=>`<label class="pill-radio"><input type="radio" name="cmpProfile" value="${p.id}" ${p.id===profile.id?'checked':''}> ${escapeHtml(p.name)}</label>`).join('')}</div>`:''}
+    <div class="breadcrumb">${escapeHtml(profile.name)} · Compare scenarios</div>
+    <div class="section-label">Pick 2 or more scenarios</div>
+    <div class="compare-pick">${profScenarios.map(s=>`<label><input type="checkbox" class="cmp-pick" data-scid="${s.id}" ${comparePicked.includes(s.id)?'checked':''}> ${escapeHtml(s.name)}</label>`).join('')}</div>
+    <div id="compareResult"></div>
+  `;
+  const pills = document.getElementById('cmpProfilePills');
+  if (pills) pills.querySelectorAll('input[name="cmpProfile"]').forEach(r => r.addEventListener('change', () => { dashboardFilter=r.value; comparePicked=[]; renderCompareView(container); }));
+  container.querySelectorAll('.cmp-pick').forEach(b => b.addEventListener('change', () => {
+    if (b.checked) comparePicked.push(b.dataset.scid); else comparePicked = comparePicked.filter(id=>id!==b.dataset.scid);
+    renderCompareResult(document.getElementById('compareResult'), profile);
+  }));
+  renderCompareResult(document.getElementById('compareResult'), profile);
+}
+
+function renderCompareResult(el, profile){
+  const picked = scenarios.filter(s => s.profileId===profile.id && comparePicked.includes(s.id));
+  if (picked.length<2){ el.innerHTML = '<div class="note">Select at least 2 scenarios to compare.</div>'; return; }
+  const results = picked.map((s,i) => ({ scenario:s, color:CHART_PALETTE[i%CHART_PALETTE.length], normal:project(profile,s,'normal'), cons:project(profile,s,'conservative') }));
+  const rows = results.map(r => `<tr>
+    <td><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${r.color};margin-right:6px;"></span>${escapeHtml(r.scenario.name)}</td>
+    <td class="mono">${fmt(r.normal.rows[0].fireTarget)}</td>
+    <td class="mono">${r.normal.achievedAge??'90+'}</td>
+    <td class="mono">${r.cons.achievedAge??'90+'}</td>
+    <td class="mono">${fmt(r.normal.rows[r.normal.rows.length-1].combined)}</td>
+    <td class="mono">${fmt(r.cons.rows[r.cons.rows.length-1].combined)}</td>
+    <td class="mono" style="${r.cons.depletionAge?'color:var(--danger)':''}">${r.cons.depletionAge?'Age '+r.cons.depletionAge:'None'}</td>
+  </tr>`).join('');
+  el.innerHTML = `
+    <div class="table-scroll"><table><thead><tr>
+      <th style="text-align:left;">Scenario</th><th>Target today</th><th>Achieved (Normal)</th><th>Achieved (Cons.)</th><th>Pot @90 (Normal)</th><th>Pot @90 (Cons.)</th><th>Depletion (Cons.)</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="scroll-hint show">← scroll table for more →</div>
+    <div class="section-label">Combined pot — Normal case</div>
+    <div class="chart-wrap">
+      <div class="legend">${results.map(r=>`<span><span class="sw" style="background:${r.color}"></span>${escapeHtml(r.scenario.name)}</span>`).join('')}</div>
+      ${renderMultiChart(results.map(r=>({rows:r.normal.rows,color:r.color})))}
+    </div>
+    <div class="section-label">Combined pot — Conservative case</div>
+    <div class="chart-wrap">
+      <div class="legend">${results.map(r=>`<span><span class="sw" style="background:${r.color}"></span>${escapeHtml(r.scenario.name)}</span>`).join('')}</div>
+      ${renderMultiChart(results.map(r=>({rows:r.cons.rows,color:r.color})))}
+    </div>
+  `;
+}
+
+function renderMultiChart(series){
+  const isMobile = window.innerWidth<=768;
+  const w=1080,h=isMobile?380:260,padL=60,padR=20,padT=16,padB=isMobile?40:30;
+  const allVals=[0]; series.forEach(s=>s.rows.forEach(r=>allVals.push(r.combined)));
+  const maxV=Math.max(...allVals)*1.08, minV=Math.min(0,Math.min(...allVals));
+  const ages = series[0].rows.map(r=>r.age);
+  const xScale=age=>padL+(age-ages[0])/(ages[ages.length-1]-ages[0])*(w-padL-padR);
+  const yScale=v=>padT+(1-(v-minV)/(maxV-minV))*(h-padT-padB);
+  const zeroY=yScale(0);
+  let ticks='';
+  for (let a=ages[0]; a<=ages[ages.length-1]; a+=10){
+    const x=xScale(a);
+    ticks+=`<line x1="${x}" y1="${padT}" x2="${x}" y2="${h-padB}" stroke="#26262b" stroke-width="1"/>`;
+    ticks+=`<text x="${x}" y="${h-10}" fill="#8a8a90" font-size="${isMobile?12:10}" font-family="IBM Plex Mono" text-anchor="middle">${a}</text>`;
+  }
+  const paths = series.map(s => {
+    const d = s.rows.map((r,i)=>`${i===0?'M':'L'}${xScale(r.age).toFixed(1)},${yScale(r.combined).toFixed(1)}`).join(' ');
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.2"/>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; display:block;">
+    ${ticks}
+    <line x1="${padL}" y1="${zeroY}" x2="${w-padR}" y2="${zeroY}" stroke="#26262b" stroke-width="1" stroke-dasharray="2,3"/>
+    ${paths}
+  </svg>`;
+}
+
+/* ============================= Presets & Defaults view ============================= */
+function renderPresetsView(container){
+  container.innerHTML = `
+    <div class="note" style="margin:0 0 18px;">Lean, Regular, and Fat trace to the common FIRE-community 4% safe-withdrawal-rate convention (25× ≈ 4%). Coast and Barista don't have an independent standard — they conventionally reuse the Regular number. All are editable, and you can add your own.</div>
+    <div class="section-label">FIRE type presets</div>
+    <div id="presetsHolder">${presets.map(p => `
+      <div class="preset-row">
+        <div class="field"><label for="pname_${p.name}">What should this FIRE type be called?</label><input id="pname_${p.name}" data-preset-name="${p.name}" data-preset-field="name" type="text" value="${escapeHtml(p.name)}" ${p.isCustom?'':'disabled'}></div>
+        <div class="field"><label for="pnorm_${p.name}">What withdrawal multiple (×), Normal case?</label><input id="pnorm_${p.name}" data-preset-name="${p.name}" data-preset-field="multNormal" type="number" value="${p.multNormal}"></div>
+        <div class="field"><label for="pcons_${p.name}">What withdrawal multiple (×), Conservative case?</label><input id="pcons_${p.name}" data-preset-name="${p.name}" data-preset-field="multCons" type="number" value="${p.multCons}"></div>
+        ${p.isCustom ? `<button class="row-del del-preset-btn" data-preset-name="${p.name}">Remove</button>` : '<span></span>'}
+      </div>`).join('')}</div>
+    <button class="ghost small add-row-btn" id="addPresetBtn">+ Add custom preset</button>
+
+    <div class="section-label">Default assumptions for new profiles/scenarios</div>
+    <div class="grid">
+      ${field('What should the default MYR/USD rate be?','number','fxRate',settings.fxRate,'0.01')}
+      ${field('What inflation rate should we assume, per year?','number','inflationPct',settings.inflationPct??3)}
+      ${field('What Normal-case investment return %/yr (nominal)?','number','rEquityNormal',settings.rEquityNormal)}
+      ${field('What Conservative-case investment return %/yr (nominal)?','number','rEquityCons',settings.rEquityCons)}
+      ${field('What Normal-case EPF dividend %/yr (nominal)?','number','rEpfNormal',settings.rEpfNormal)}
+      ${field('What Conservative-case EPF dividend %/yr (nominal)?','number','rEpfCons',settings.rEpfCons)}
+    </div>
+    <div class="note">All return/dividend rates above are <strong>nominal</strong> (actual quoted rates). The app converts them to real terms using the inflation assumption before projecting — everything shown elsewhere stays in today's MYR. These only prefill new profiles/scenarios — editing them doesn't change ones you've already created.</div>
+  `;
+  container.querySelectorAll('[data-preset-field]').forEach(inp => inp.addEventListener('change', async () => {
+    const preset = presets.find(p=>p.name===inp.dataset.presetName);
+    const f = inp.dataset.presetField;
+    const oldName = preset.name;
+    if (f==='name'){ preset.name = inp.value; await dbDelete('presets', oldName); }
+    else preset[f] = parseFloat(inp.value)||0;
+    await dbPut('presets', preset);
+    renderPresetsView(container);
+  }));
+  container.querySelectorAll('.del-preset-btn').forEach(b => b.addEventListener('click', async () => {
+    presets = presets.filter(p=>p.name!==b.dataset.presetName);
+    await dbDelete('presets', b.dataset.presetName);
+    renderPresetsView(container);
+  }));
+  document.getElementById('addPresetBtn').addEventListener('click', async () => {
+    const name = 'Custom '+(presets.filter(p=>p.isCustom).length+1);
+    const p = { name, multNormal:25, multCons:28, isCustom:true };
+    presets.push(p); await dbPut('presets', p); renderPresetsView(container);
+  });
+  container.querySelectorAll('input[data-field]').forEach(inp => inp.addEventListener('change', async () => {
+    settings[inp.dataset.field] = parseFloat(inp.value)||0;
+    await dbPut('settings', settings);
+  }));
+}
+
+/* ============================= Data view ============================= */
+function renderDataView(container){
+  container.innerHTML = `
+    <div class="section-label">Backup &amp; restore (JSON — round-trips everything: profiles, scenarios, presets, defaults)</div>
+    <div class="data-actions">
+      <button class="primary" id="exportJsonBtn">Export full backup (.json)</button>
+      <label class="ghost" style="display:inline-block; text-align:center; padding:10px 16px; border-radius:6px; border:1px solid var(--line); cursor:pointer;">
+        Import backup (.json)<input type="file" accept=".json" id="importJsonInput" style="display:none;">
+      </label>
+      <button class="danger-ghost" id="clearAllBtn">Clear all local data</button>
+    </div>
+    <div class="note">JSON backup is the only format that can be re-imported — it preserves every input exactly.</div>
+
+    <div class="section-label" style="margin-top:32px;">Export for Notion (CSV — one-way, computed projection rows)</div>
+    <div class="data-actions">
+      <button class="ghost" id="exportCsvBtn">Export projection CSV</button>
+    </div>
+    <div class="note">One row per profile × scenario × pot type (EPF / Investments / Combined) × age, Normal and Conservative side by side. This is derived output, not inputs — it can't be imported back, only dragged into a new Notion database for a chart.</div>
+  `;
+  document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+  document.getElementById('importJsonInput').addEventListener('change', importJson);
+  document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+  document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+}
+
+function exportJson(){
+  const payload = { version:2, exportedAt:new Date().toISOString(), profiles, scenarios, presets, settings };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='fire-calculator-backup.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function importJson(e){
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try{
+      const data = JSON.parse(ev.target.result);
+      if (!data.profiles || !Array.isArray(data.profiles) || !data.scenarios || !Array.isArray(data.scenarios)) throw new Error('Invalid backup file (expects v2 profiles/scenarios format)');
+      if (!(await appConfirm(`Import ${data.profiles.length} profile(s) and ${data.scenarios.length} scenario(s)? This replaces all current data.`, 'Import'))) return;
+      await dbClear('profiles'); await dbClear('scenarios'); await dbClear('presets'); await dbClear('settings');
+      for (const p of data.profiles) await dbPut('profiles', p);
+      for (const s of data.scenarios) await dbPut('scenarios', s);
+      for (const p of (data.presets||SEED_PRESETS)) await dbPut('presets', p);
+      await dbPut('settings', data.settings || SEED_SETTINGS);
+      profiles = await dbGetAll('profiles'); scenarios = await dbGetAll('scenarios'); presets = await dbGetAll('presets'); settings = (await dbGetAll('settings'))[0];
+      dashboardFilter = profiles.length>1?'all':(profiles[0]?profiles[0].id:'all');
+      await appAlert('Import complete.');
+      setView('dashboard');
+    } catch(err){ await appAlert('Could not import: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+async function clearAllData(){
+  if (!(await appConfirm('This deletes all profiles, scenarios, presets, and defaults from this browser permanently. Continue?', 'Clear all data'))) return;
+  await dbClear('profiles'); await dbClear('scenarios'); await dbClear('presets'); await dbClear('settings');
+  for (const p of SEED_PRESETS) await dbPut('presets', p);
+  await dbPut('settings', SEED_SETTINGS);
+  const prof = newProfile('My profile');
+  await dbPut('profiles', prof);
+  const sc = newScenario(prof, 'Regular');
+  await dbPut('scenarios', sc);
+  profiles = [prof]; scenarios = [sc]; presets = await dbGetAll('presets'); settings = (await dbGetAll('settings'))[0];
+  dashboardFilter = prof.id;
+  setView('dashboard');
+}
+function exportCsv(){
+  const header = ['Profile','Scenario','FIRE_Type','Pot_Type','Age','Phase','Monthly_Expense','Balance_Normal','Balance_Conservative','FIRE_Target_Normal','FIRE_Target_Conservative'];
+  const lines = [header.join(',')];
+  scenarios.forEach(scenario => {
+    const profile = profiles.find(p=>p.id===scenario.profileId);
+    if (!profile) return;
+    const normal = project(profile,scenario,'normal'), cons = project(profile,scenario,'conservative');
+    const potTypes = ['EPF','Investments','Combined'];
+    for (let i=0;i<normal.rows.length;i++){
+      const rn=normal.rows[i], rc=cons.rows[i];
+      potTypes.forEach(pt => {
+        const bn = pt==='EPF'?rn.epf:pt==='Investments'?rn.nonEpf:rn.combined;
+        const bc = pt==='EPF'?rc.epf:pt==='Investments'?rc.nonEpf:rc.combined;
+        lines.push([csvSafe(profile.name),csvSafe(scenario.name),scenario.fireType,pt,rn.age,rn.phase,Math.round(rn.monthlyExpense),Math.round(bn),Math.round(bc),Math.round(rn.fireTarget),Math.round(rc.fireTarget)].join(','));
+      });
+    }
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='fire-projection.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+function csvSafe(s){ s=String(s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+
+/* ============================= Help view ============================= */
+function renderHelpView(container){
+  const exampleScenario = scenarios[0];
+  const exampleProfile = exampleScenario ? profiles.find(p=>p.id===exampleScenario.profileId) : null;
+  let worked = '';
+  if (exampleScenario && exampleProfile){
+    const rEpf = exampleScenario.rEpfNormal/100;
+    const contrib = exampleProfile.monthlySalary*((exampleProfile.epfEmployeePct+exampleProfile.epfEmployerPct)/100)*12;
+    const nextEpf = exampleProfile.epfBalance*(1+rEpf)+contrib;
+    worked = `
+      <p><strong>Worked example</strong>, using "${escapeHtml(exampleProfile.name)}" / "${escapeHtml(exampleScenario.name)}"'s actual numbers, Normal scenario, EPF accumulation year:</p>
+      <div class="worked">
+EPF balance today: RM${fmt(exampleProfile.epfBalance)}
+EPF dividend (Normal): ${exampleScenario.rEpfNormal}%
+Monthly salary: RM${fmt(exampleProfile.monthlySalary)}
+Contribution rate: ${exampleProfile.epfEmployeePct}% + ${exampleProfile.epfEmployerPct}% = ${exampleProfile.epfEmployeePct+exampleProfile.epfEmployerPct}%
+Annual contribution = RM${fmt(exampleProfile.monthlySalary)} × ${(exampleProfile.epfEmployeePct+exampleProfile.epfEmployerPct)/100} × 12 = RM${fmt(contrib)}
+
+EPF next year = RM${fmt(exampleProfile.epfBalance)} × (1 + ${exampleScenario.rEpfNormal}%) + RM${fmt(contrib)}
+             = RM${fmt(exampleProfile.epfBalance*(1+rEpf))} + RM${fmt(contrib)}
+             = RM${fmt(nextEpf)}
+      </div>`;
+  }
+  container.innerHTML = `
+    <div class="help-block">
+      <h3>Profile vs Scenario</h3>
+      <p>A <strong>Profile</strong> holds facts about a person — age, EPF, salary, cash/savings, investments, FX rate — entered once. A <strong>Scenario</strong> is a strategy you're testing against that profile — FIRE type, working-to age, spending timeline, goal. One profile can have many scenarios (Lean vs Fat vs Coast) without re-entering the same balances each time; editing the profile updates every scenario under it instantly.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Nominal in, real out</h3>
+      <p>Return and dividend rates (cash/savings, investments, EPF) are entered as <strong>nominal</strong> — the actual rate you'd see quoted (e.g. S&amp;P 500's long-run ~10.5%/yr, EPF's declared dividend, or 0% for idle cash). The app converts each to a real rate using the inflation assumption (Presets &amp; Defaults) via the Fisher equation, then projects entirely in today's MYR:</p>
+      <div class="formula">real_rate = ((1 + nominal_rate) / (1 + inflation)) − 1</div>
+      <p>Every balance, expense, and target you see is in today's money. Expense and income amounts can optionally grow at a compounding annual % of their own, set per timeline row — otherwise flat until the next row. Salary also grows at its own annual % (Profile). The MYR/USD rate is applied once at today's rate rather than projected — this keeps FX handling simple, at the cost of not modelling currency drift.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>The three phases</h3>
+      <div class="formula">Accumulation  (current age → working-to age, unless Coast)
+  EPF(t+1)          = EPF(t) × (1 + r_epf) + annual_EPF_contribution
+  each cash/investment bucket(t+1) = bucket(t) × (1 + r_bucket) + annual_contribution
+
+Bridge  (working-to age → 55, only if working-to age &lt; 55)
+  EPF(t+1)     = EPF(t) × (1 + r_epf)                    [locked, no contribution, no withdrawal]
+  net_withdrawal = max(annual_expense − other_income − barista_income, 0)
+  drain cash/investment buckets lowest-return-first until net_withdrawal is covered or all are at 0
+  any amount still unmet is a real shortfall — EPF cannot help pre-55
+
+Decumulation  (55 → plan-to age)
+  net_withdrawal = max(annual_expense − other_income − barista_income, 0)
+  drain EPF + every cash/investment bucket, lowest-return-first, until net_withdrawal is covered or all are at 0
+  any amount still unmet is a real shortfall — pot is depleted</div>
+      <p>Coast FIRE scenarios set annual contributions to zero from the current age onward, but otherwise follow the same three phases — the working-to age still marks when bridge withdrawals begin. No balance is ever allowed to go negative: each bucket (EPF, each cash/savings account, each investment) is tracked separately, and withdrawals always drain the lowest-return bucket first — draining a zero-return cash account before touching EPF or growth investments, for example — preserving the highest-return money for as long as possible. Anything still unmet after every available bucket hits 0 is recorded as that year's <strong>shortfall</strong> and flagged (EPF-locked pre-55, or pot depleted from 55 onward) rather than shown as an implausible negative balance.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Expense/income growth</h3>
+      <div class="formula">value_at(age) = row.value × (1 + row.growthPct/100) ^ (age − row.age)
+  where "row" is the latest timeline row with row.age ≤ age</div>
+      <p>Each expense or income row can carry its own annual growth %, compounding from that row's starting age until the next row takes over (or your plan-to age if it's the last one). Set it to 0 for a flat step — the pre-existing behaviour.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Cash/savings vs investments</h3>
+      <p><strong>Cash/savings</strong> (Profile) are for accounts without market risk — everyday cash, fixed deposits, ASB/ASNB. Each one can either have no return (pure idle cash, 0%) or a return you set. <strong>Investments</strong> (Profile) are market-linked — equities, unit trusts, ETFs — and always carry a return, defaulting to the scenario's blended equity assumption if you don't override it per asset. Keeping them separate means a pure-cash saver isn't forced to assign a market return to money that isn't invested, and it lets the withdrawal engine correctly drain idle cash before touching anything that's actually growing.</p>
+      <div class="formula">r_invest (display only) = Σ(balance_i × return_i) / Σ(balance_i)     — computed once, at today's balances</div>
+      <p>That blended figure is shown for reference (e.g. in the chart tooltip), but it is <strong>not</strong> what the withdrawal engine uses — the engine always works with each bucket's own balance and return individually.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Withdrawal multiple &amp; FIRE target</h3>
+      <div class="formula">withdrawal_multiple = 1 / safe_withdrawal_rate        e.g. 25× ≈ 1/25 = 4%/yr
+standard_target = (annual_expense − annual_other_income) × withdrawal_multiple
+target_used = goal_amount   if a goal is enabled
+            = standard_target   otherwise</div>
+      <p>The target is <strong>not fixed</strong> — annual expense and other income are read from whatever your timeline (and its growth %) says at each age, so the target line moves if you've added a downsizing step, a pension starting later, etc. When a goal is enabled, it replaces the multiple-based target entirely as the line used for the achieved-age check; the standard target is still shown for reference.</p>
+      <p>Lean, Regular, and Fat are identical in every formula above — they differ only by the withdrawal multiple. Coast (zero contributions) and Barista (part-time income overlay) are structurally different strategies, not just different multiples — that's what defines them as their own FIRE types.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Achieved age, goal check, depletion</h3>
+      <div class="formula">achieved_age  = first age where combined_pot ≥ target_used
+goal_check    = (combined_pot at goal_age) ≥ goal_amount
+depletion_age = first age after achieved_age (or 55) where combined_pot &lt; 0</div>
+      <p>Projections run from your current age to your <strong>plan-to age</strong> (Profile, defaults to 90). One-time amounts (Scenario) — a property sale, an inheritance, a big one-off cost — are added to or subtracted from Investments at the exact age you set, in today's MYR.</p>
+    </div>
+
+    <div class="help-block">
+      <h3>Closing the gap (guidance)</h3>
+      <p>When a scenario shows a shortfall under the Conservative case, the dashboard searches for two fixes: (1) an extra flat monthly MYR contribution (added to your first-listed investment) that would make the target reachable by 90, found by binary search; (2) how far the working-to age would need to move out to reach the target at the current contribution rate, found by scanning forward year by year. Either, both, or neither may be feasible depending on the numbers.</p>
+    </div>
+
+    ${worked ? `<div class="help-block">${worked}</div>` : ''}
+  `;
+}
+
+init();
+
+</script>
+</body>
+</html>

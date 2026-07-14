@@ -1434,7 +1434,7 @@ function renderMilestoneTable(profile, scenario, normal, cons){
       <td class="mono">${statusC}</td><td class="mono">${dispVal(rc.epf, age, profile.currentAge)}</td><td class="mono">${dispVal(rc.nonEpf, age, profile.currentAge)}</td><td class="mono">${dispVal(rc.combined, age, profile.currentAge)}</td><td class="mono">${dispVal(rc.withdrawal, age, profile.currentAge)}</td>
     </tr>`;
   }).join('');
-  return `<div class="note" style="margin-top:0;">One row per year, matching the chart. Highlighted rows are key milestones (working-to age, 55, target-hit ages, goal age). Status sits within each case's own section and shows the cumulative shortfall carried forward and grown at that case's return, not just that single year's gap. A row turns orange once only the Conservative case is short, and red once the Normal case is short too. ${isNominalMode()?'Showing the actual money you\'d have or spend at that age.':'Showing purchasing power now — what that future money is worth in today\'s terms.'} Switch this at the top of the page. Scroll up/down and left/right within the table below — the Age column and header row stay put.</div>
+  return `
   <div class="table-scroll table-scroll-bounded">
   <table><thead>
     <tr><th class="col-age" rowspan="2">Age</th><th rowspan="2">Phase</th><th rowspan="2">Salary</th><th rowspan="2">Monthly<br>expense</th>
